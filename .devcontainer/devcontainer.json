@@ -1,0 +1,64 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/dotnet
+{
+	"name": "Hugo Blog",
+	"build": {
+		"context": ".",
+		"dockerfile": "Dockerfile"
+	},
+	"remoteEnv": {},
+	"mounts": [
+		"source=${localEnv:TMP}\\linux,target=/tmp,type=bind,consistency=cached"
+	],
+	"containerEnv": {
+		"WORKFOLDER": "${containerWorkspaceFolder}"
+	},
+	"postCreateCommand": "./.devcontainer/custom-install.sh",
+	"customizations": {
+		"vscode": {
+			"settings": {
+				"terminal.integrated.fontFamily": "MesloLGM Nerd Font",
+				"terminal.integrated.defaultProfile.linux": "zsh",
+				"files.associations": {
+					"*.toml": "toml"
+				},
+				"[markdown]": {
+					"editor.wordWrap": "on",
+					"editor.quickSuggestions": {
+						"other": "off",
+						"comments": "off",
+						"strings": "off"
+					}
+				}
+			},
+			"extensions": [
+				// --- Hugo / Blog ---
+				"budparr.language-hugo-vscode",
+				"rusnasonov.vscode-hugo",
+				"yzhang.markdown-all-in-one",
+				"davidanson.vscode-markdownlint",
+				"bierner.markdown-preview-github-styles",
+				"tamasfe.even-better-toml",
+				"editorconfig.editorconfig",
+				// --- CI/CD e Deploy ---
+				"github.vscode-github-actions",
+				"redhat.vscode-yaml",
+				"ms-azuretools.vscode-docker",
+				"shanoor.vscode-nginx",
+				// --- Git e Versionamento ---
+				"eamodio.gitlens",
+				"vivaxy.vscode-conventional-commits",
+				// --- Shell (deploy scripts) ---
+				"mads-hartmann.bash-ide-vscode",
+				"timonwong.shellcheck",
+				"foxundermoon.shell-format",
+				// --- Utilitários ---
+				"gruntfuggly.todo-tree",
+				"ms-vscode-remote.vscode-remote-extensionpack",
+				"ms-vscode.powershell",
+				"vscode-icons-team.vscode-icons",
+				"shynet.vscode-taskkill"
+			]
+		}
+	}
+}

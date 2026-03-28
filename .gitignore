@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+uv.lock
+
+# Reports e evidências
+reports/
+
+# VPN configs (contêm chaves privadas)
+vpn/configs/*.conf
+
+# IDE
+.idea/
+*.swp
+*.swo
