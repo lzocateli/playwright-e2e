@@ -234,6 +234,45 @@ Após execução, confira em `reports/`:
 | Browser timeout | Aumentar timeout: `--timeout 60000` |
 | Imagem desatualizada | Usar `./run-e2e.sh --rebuild` |
 | Vídeos não gravados | Confirmar diretório `reports/videos/` montado |
+| `sd-bus call: Permission denied` no build (WSL2) | Ver seção abaixo |
+
+### Build falha com `sd-bus call: Permission denied` no WSL2
+
+Ocorre quando o WSL2 não tem systemd ativo. O Podman tenta usar o cgroup manager `systemd`, não encontra sessão disponível e o `crun` falha ao criar o container de build.
+
+**Solução permanente** — habilitar systemd no WSL2:
+
+```bash
+sudo nano /etc/wsl.conf
+```
+
+Adicione (ou edite):
+
+```ini
+[boot]
+systemd=true
+```
+
+Reinicie a distro no PowerShell do Windows:
+
+```powershell
+wsl --shutdown
+```
+
+Abra o WSL novamente e confirme:
+
+```bash
+systemctl --no-pager status
+# State: running  →  OK
+```
+
+**Workaround imediato** (sem precisar reiniciar) — faça o build manualmente forçando `cgroupfs`:
+
+```bash
+BUILDAH_ISOLATION=chroot podman build --cgroup-manager=cgroupfs -t playwright-e2e -f Containerfile .
+```
+
+Após o build, o `run-e2e.sh` detecta que a imagem já existe e executa normalmente.
 
 ## Tutorial: Publicar imagens no Docker Hub (Windows)
 
@@ -308,6 +347,16 @@ podman run --rm \
 | `lzocateli/playwright:v1.49.0-noble` | Docker Hub | Cópia da imagem base Microsoft |
 | `lzocateli/playwright-e2e:v0.1.0` | Build do Containerfile | Imagem completa com testes + VPN + uv (usa `lzocateli/playwright` como base) |
 
+- Copiar os arquivos para wsl2
+
+```bash
+mkdir -p /home/lzocateli/projs/playwright-e2e/vpn/configs
+cp -r /mnt/c/Users/lzoca/projetos/playwright-e2e/vpn/configs/* /home/lzocateli/projs/playwright-e2e/vpn/configs/
+
+# Exemplo de execução real
+./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed normal -- tests/test_blog_navigation.py
+```
+
 ### Atualizando versões
 
 Quando atualizar o Playwright ou o projeto:
@@ -322,3 +371,7 @@ docker push lzocateli/playwright:v1.50.0-noble
 docker build -f Containerfile -t lzocateli/playwright-e2e:v0.2.0 .
 docker push lzocateli/playwright-e2e:v0.2.0
 ```
+
+## Licença
+
+Este projeto é distribuído sob a licença MIT. Veja o arquivo [LICENSE](LICENSE).

@@ -1,0 +1,22 @@
+{
+  "files.associations": {
+    "*.toml": "toml"
+  },
+  "[markdown]": {
+    "editor.wordWrap": "on",
+    "editor.quickSuggestions": {
+      "other": "off",
+      "comments": "off",
+      "strings": "off"
+    }
+  },
+  "editor.formatOnSave": true,
+  "[html]": {
+    "editor.formatOnSave": false
+  },
+  "markdownlint.config": {
+    "MD033": false,
+    "MD013": false
+  },
+  "terminal.integrated.fontFamily": "MesloLGM Nerd Font"
+}

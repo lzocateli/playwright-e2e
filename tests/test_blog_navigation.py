@@ -13,9 +13,11 @@ import pytest
 
 # URLs de posts para parametrizar (adicione ou altere conforme necessário)
 BLOG_POSTS = [
-    "/posts/2025/01-fundamentos-testes-csharp/",
-    "/posts/2025/02-azure-key-vault-dotnet/",
-    "/posts/2025/03-ef-core-bulk-extensions/",
+    # Últimos 4 artigos (março 2026)
+    "/posts/2026/deno-bun-nodejs-comparativo-node-modules-angular/",
+    "/posts/2026/efcore-bulkextensions-operacoes-massa-dotnet/",
+    "/posts/2026/uv-python-gerenciador-pacotes-comparativo-csharp/",
+    "/posts/2026/ia-llm-rag-agents-mcp-guia-profissional/",
 ]
 
 

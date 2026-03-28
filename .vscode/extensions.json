@@ -1,0 +1,43 @@
+{
+  // Profile: Playwright E2E Testing
+  // Extensões recomendadas para testes E2E com Playwright + Python + Podman + VPN
+  "recommendations": [
+    // --- Python e Testes ---
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.debugpy",
+    "littlefoxteam.vscode-python-test-adapter",
+    // --- Playwright e E2E ---
+    "ms-playwright.playwright",
+    "orta.vscode-jest-runner",
+    // --- Container (Docker/Podman) ---
+    "ms-azuretools.vscode-docker",
+    "ms-vscode-remote.remote-containers",
+    // --- Shell (run-e2e.sh e scripts) ---
+    "mads-hartmann.bash-ide-vscode",
+    "timonwong.shellcheck",
+    "foxundermoon.shell-format",
+    // --- Configuração e YAML ---
+    "redhat.vscode-yaml",
+    "tamasfe.even-better-toml",
+    "editorconfig.editorconfig",
+    // --- Git e Versionamento ---
+    "eamodio.gitlens",
+    "vivaxy.vscode-conventional-commits",
+    "github.copilot-chat",
+    // --- Markdown (README) ---
+    "yzhang.markdown-all-in-one",
+    "davidanson.vscode-markdownlint",
+    "bierner.markdown-preview-github-styles",
+    // --- CI/CD ---
+    "github.vscode-github-actions",
+    // --- Utilitários e Produtividade ---
+    "ms-azure-tools.vscode-azure-github-copilot",
+    "gruntfuggly.todo-tree",
+    "ms-vscode-remote.vscode-remote-extensionpack",
+    "ms-vscode.powershell",
+    "vscode-icons-team.vscode-icons",
+    "ms-windows-ai-studio.windows-ai-studio"
+  ],
+  "unwantedRecommendations": []
+}
