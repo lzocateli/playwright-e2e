@@ -65,7 +65,7 @@ SPEED_MULTIPLIERS = {
 }
 
 
-_EXECUTED_TESTS: dict[str, str] = {}
+_EXECUTED_TESTS: dict[str, dict[str, str]] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -196,11 +196,30 @@ def pytest_configure(config: pytest.Config) -> None:
 def pytest_runtest_logreport(report: pytest.TestReport) -> None:
     """Coleta status final por teste para seção estática no report.html."""
     if report.when == "call":
-        _EXECUTED_TESTS[report.nodeid] = report.outcome
+        vpn_summary = ""
+        for section_name, section_content in report.sections:
+            if section_name == "VPN":
+                vpn_summary = " | ".join(
+                    line.strip()
+                    for line in section_content.splitlines()
+                    if line.strip()
+                )
+                break
+
+        _EXECUTED_TESTS[report.nodeid] = {
+            "outcome": report.outcome,
+            "vpn": vpn_summary,
+        }
         return
 
     if report.when in {"setup", "teardown"} and report.failed:
-        _EXECUTED_TESTS.setdefault(report.nodeid, "error")
+        _EXECUTED_TESTS.setdefault(
+            report.nodeid,
+            {
+                "outcome": "error",
+                "vpn": "",
+            },
+        )
 
 
 def pytest_unconfigure(config: pytest.Config) -> None:
@@ -237,12 +256,25 @@ def pytest_unconfigure(config: pytest.Config) -> None:
 
     list_items: list[str] = []
     for nodeid in sorted(_EXECUTED_TESTS):
-        outcome = _EXECUTED_TESTS[nodeid]
+        entry = _EXECUTED_TESTS[nodeid]
+        outcome = entry.get("outcome", "error")
+        vpn_info = entry.get("vpn", "")
         if outcome not in totals:
             totals[outcome] = 0
         totals[outcome] += 1
         label = outcome_label.get(outcome, outcome.upper())
-        list_items.append(f"<li><strong>[{label}]</strong> {html.escape(nodeid)}</li>")
+
+        if vpn_info:
+            list_items.append(
+                "<li>"
+                f"<strong>[{label}]</strong> {html.escape(nodeid)}"
+                f"<br><small>VPN: {html.escape(vpn_info)}</small>"
+                "</li>"
+            )
+        else:
+            list_items.append(
+                f"<li><strong>[{label}]</strong> {html.escape(nodeid)}</li>"
+            )
 
     summary_parts = [
         f"PASS: {totals.get('passed', 0)}",

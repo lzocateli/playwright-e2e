@@ -28,6 +28,7 @@ EXEMPLOS:
   ${PROGRAM} --browser chromium                 Browser especifico
   ${PROGRAM} --rebuild --base-url https://z.li  Reconstroi imagem
     ${PROGRAM} --open-report --base-url https://z.li Abre relatorio ao finalizar
+    ${PROGRAM} --open-first-video --base-url https://z.li Abre o primeiro .webm
   ${PROGRAM} -- -k test_home                    Filtra testes pytest
 
 ──────────────────────────────────────────────────────────────
@@ -46,6 +47,7 @@ OPCOES
     --vpn-strict         Falha se a saída não for Mullvad
   --rebuild            Remove e reconstroi a imagem antes de executar
     --open-report        Abre reports/report.html ao finalizar
+    --open-first-video   Abre o primeiro .webm em reports/videos ao finalizar
   --                   Tudo apos '--' e passado diretamente ao pytest
 
 ──────────────────────────────────────────────────────────────
@@ -156,6 +158,7 @@ VPN_ROTATE="off"
 VPN_STRICT=false
 FORCE_REBUILD=false
 OPEN_REPORT=false
+OPEN_FIRST_VIDEO=false
 EXTRA_PYTEST_ARGS=()
 
 while [[ $# -gt 0 ]]; do
@@ -172,6 +175,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --open-report)  OPEN_REPORT=true; shift ;;
+        --open-first-video) OPEN_FIRST_VIDEO=true; shift ;;
         --)             shift; EXTRA_PYTEST_ARGS+=("$@"); break ;;
         *)              EXTRA_PYTEST_ARGS+=("$1"); shift ;;
     esac
@@ -263,6 +267,7 @@ $CONTAINER_RT "${CONTAINER_ARGS[@]}" "$IMAGE_NAME" "${PYTEST_ARGS[@]}"
 
 echo ""
 echo "📊 Relatório: $SCRIPT_DIR/reports/report.html"
+echo "🎬 Vídeos:    $SCRIPT_DIR/reports/videos"
 
 if [[ "$OPEN_REPORT" == true ]]; then
     REPORT_PATH="$SCRIPT_DIR/reports/report.html"
@@ -280,5 +285,34 @@ if [[ "$OPEN_REPORT" == true ]]; then
         fi
     else
         echo "⚠️  Relatorio nao encontrado em: $REPORT_PATH"
+    fi
+fi
+
+if [[ "$OPEN_FIRST_VIDEO" == true ]]; then
+    VIDEOS_PATH="$SCRIPT_DIR/reports/videos"
+    FIRST_VIDEO=""
+
+    if [[ -d "$VIDEOS_PATH" ]]; then
+        for video in "$VIDEOS_PATH"/*.webm; do
+            if [[ -f "$video" ]]; then
+                FIRST_VIDEO="$video"
+                break
+            fi
+        done
+    fi
+
+    if [[ -n "$FIRST_VIDEO" ]]; then
+        if command -v xdg-open &>/dev/null; then
+            xdg-open "$FIRST_VIDEO" >/dev/null 2>&1 || true
+        elif command -v wslview &>/dev/null; then
+            wslview "$FIRST_VIDEO" >/dev/null 2>&1 || true
+        elif command -v powershell.exe &>/dev/null && command -v wslpath &>/dev/null; then
+            WIN_VIDEO_PATH="$(wslpath -w "$FIRST_VIDEO")"
+            powershell.exe -NoProfile -Command "Start-Process -FilePath '$WIN_VIDEO_PATH'" >/dev/null 2>&1 || true
+        else
+            echo "⚠️  Nao foi possivel abrir automaticamente o primeiro vídeo. Abra manualmente: $FIRST_VIDEO"
+        fi
+    else
+        echo "⚠️  Nenhum .webm encontrado em: $VIDEOS_PATH"
     fi
 fi

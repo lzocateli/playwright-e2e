@@ -64,16 +64,17 @@ chmod +x run-e2e.sh
 # Browser específico
 ./run-e2e.sh --base-url https://zocate.li --browser chromium
 
-# Execução com todos os parametros
-./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed normal --open-report -- tests/test_blog_navigation.py
-
-./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed normal --vpn-strict --open-report -- tests/test_blog_navigation.py
-
 # Reconstruir imagem
 ./run-e2e.sh --rebuild --base-url https://zocate.li
 
 # Abrir relatório automaticamente ao finalizar
 ./run-e2e.sh --open-report --base-url https://zocate.li
+
+# Abrir automaticamente o primeiro vídeo (.webm)
+./run-e2e.sh --open-first-video --base-url https://zocate.li
+
+# Execução com todos os parametros
+./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed normal --vpn-strict --open-report --open-first-video -- tests/test_blog_navigation.py
 ```
 
 ## Opções CLI (pytest)
@@ -87,6 +88,7 @@ chmod +x run-e2e.sh
 | `--vpn-strict` | flag | desligado | Falha a execução se `mullvad_exit_ip` não for verdadeiro |
 | `--browser` | `chromium`, `firefox`, `webkit` | todos | Browser específico |
 | `--open-report` | flag | desligado | Abre `reports/report.html` automaticamente ao finalizar |
+| `--open-first-video` | flag | desligado | Abre o primeiro `.webm` de `reports/videos` automaticamente |
 
 ### Multiplicadores de velocidade
 
@@ -239,6 +241,12 @@ Após execução, confira em `reports/`:
 
 - `report.html` — Relatório HTML interativo
 - `videos/` — Gravação de cada teste (.webm)
+
+Quando VPN está ativa, o relatório também inclui contexto da VPN por teste:
+
+- Local (`.conf`) usado no teste
+- IP observado
+- Indicador `Mullvad Exit` (`true`/`false`)
 
 > **Importante**: para ver a lista completa de testes (pass/fail/skipped), abra o `report.html` no navegador do sistema.
 > O preview interno do VS Code pode desabilitar scripts e ocultar a tabela de resultados.
