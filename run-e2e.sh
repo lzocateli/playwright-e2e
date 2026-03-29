@@ -24,11 +24,11 @@ EXEMPLOS:
   ${PROGRAM} --base-url https://zocate.li       Site em producao
   ${PROGRAM} --enable-vpn --human-speed slow    VPN + delays longos
   ${PROGRAM} --enable-vpn --vpn-rotate per-test Rotacao VPN por teste
-    ${PROGRAM} --enable-vpn --vpn-strict          Falha se saída não for Mullvad
+  ${PROGRAM} --enable-vpn --vpn-strict          Falha se saída não for Mullvad
   ${PROGRAM} --browser chromium                 Browser especifico
   ${PROGRAM} --rebuild --base-url https://z.li  Reconstroi imagem
-    ${PROGRAM} --open-report --base-url https://z.li Abre relatorio ao finalizar
-    ${PROGRAM} --open-first-video --base-url https://z.li Abre o primeiro .webm
+  ${PROGRAM} --open-report --base-url https://z.li Abre relatorio ao finalizar
+  ${PROGRAM} --open-first-video --base-url https://z.li Abre o primeiro .webm
   ${PROGRAM} -- -k test_home                    Filtra testes pytest
 
 ──────────────────────────────────────────────────────────────
@@ -44,19 +44,19 @@ OPCOES
                        Adiciona --cap-add=NET_ADMIN ao container
   --vpn-rotate MODE    per-test | per-session | off
                        Default: off
-    --vpn-strict         Falha se a saída não for Mullvad
+  --vpn-strict         Falha se a saída não for Mullvad
   --rebuild            Remove e reconstroi a imagem antes de executar
-    --open-report        Abre reports/report.html ao finalizar
-    --open-first-video   Abre o primeiro .webm em reports/videos ao finalizar
+  --open-report        Abre reports/report.html ao finalizar
+  --open-first-video   Abre o primeiro .webm em reports/videos ao finalizar
   --                   Tudo apos '--' e passado diretamente ao pytest
 
 ──────────────────────────────────────────────────────────────
 IMAGEM
 ──────────────────────────────────────────────────────────────
-    Nome:       lzocateli/playwright-e2e:v0.1.0
+  Nome:       lzocateli/playwright-e2e:v0.1.0
   Base:       lzocateli/playwright (copia de mcr.microsoft.com/playwright/python)
-    Pull:       Automatico na primeira execucao
-    Build:      Automatico apenas se a imagem nao estiver disponivel no registry
+  Pull:       Automatico na primeira execucao
+  Build:      Automatico apenas se a imagem nao estiver disponivel no registry
   Containerfile no diretorio do script
 
 ──────────────────────────────────────────────────────────────

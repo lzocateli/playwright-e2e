@@ -19,6 +19,7 @@ playwright-e2e/
 ├── conftest.py              # Fixtures: slow_page, human_delay, browser context
 ├── Containerfile            # Imagem com Playwright + WireGuard
 ├── run-e2e.sh               # Script wrapper Podman
+├── rotate-posts.py          # Rotação automática de artigos via sitemap
 ├── vpn/
 │   ├── vpn_manager.py       # Classe VPNManager (connect/disconnect/rotate)
 │   ├── conftest_vpn.py      # Plugin pytest para VPN
@@ -76,6 +77,44 @@ chmod +x run-e2e.sh
 # Execução com todos os parametros
 ./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed normal --vpn-strict --open-report --open-first-video -- tests/test_blog_navigation.py
 ```
+
+## Rotação automática de artigos
+
+O script `rotate-posts.py` lê o `sitemap.xml` do blog, seleciona aleatoriamente artigos novos para `BLOG_POSTS` e move os já testados para `BLOG_POSTS_HIST` em `tests/test_blog_navigation.py`.
+
+```bash
+# Ver o que mudaria (sem alterar arquivo)
+uv run rotate-posts.py --dry-run
+
+# Rotação padrão (3-6 artigos novos)
+uv run rotate-posts.py
+
+# Range customizado
+uv run rotate-posts.py --min-posts 3 --max-posts 6
+
+# Site diferente
+uv run rotate-posts.py --base-url https://zocate.li
+
+# Todos os parametros
+uv run rotate-posts.py --base-url https://zocate.li --min-posts 3 --max-posts 6 --test-file tests/test_blog_navigation.py
+
+# Limpar histórico e começar do zero
+uv run rotate-posts.py --reset-hist
+```
+
+### Opções CLI (rotate-posts.py)
+
+| Opção | Valores | Default | Descrição |
+|---|---|---|---|
+| `--base-url` | URL | `https://zocate.li` | URL base do site (para buscar sitemap.xml) |
+| `--min-posts` | inteiro | `3` | Mínimo de artigos a selecionar |
+| `--max-posts` | inteiro | `6` | Máximo de artigos a selecionar |
+| `--dry-run` | flag | desligado | Exibe o que mudaria sem alterar o arquivo |
+| `--reset-hist` | flag | desligado | Limpa `BLOG_POSTS_HIST` antes de rotacionar |
+| `--test-file` | caminho | auto-detectado | Caminho para `test_blog_navigation.py` |
+
+> **Fluxo recomendado**: Execute `uv run rotate-posts.py` antes de `run-e2e.sh` para testar artigos diferentes a cada execução.
+> Quando todos os artigos do sitemap já estiverem no histórico, o script recicla os mais antigos automaticamente.
 
 ## Opções CLI (pytest)
 

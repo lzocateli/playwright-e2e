@@ -10,9 +10,15 @@ from __future__ import annotations
 
 import pytest
 
-# URLs de posts para parametrizar (adicione ou altere conforme necessário)
 BLOG_POSTS = [
-    # Últimos 4 artigos (março 2026)
+    # Selecionados aleatoriamente em 2026-03-29 via rotate-posts.py
+    "/posts/2026/logging-estruturado-dinamico-dotnet8-azure-appinsights/",
+    "/posts/2025/design-api-rest-verbos-http-parameter-binding-aspnet-core/",
+    "/posts/2026/bff-backend-for-frontend-seguranca/",
+    "/posts/2025/paralelismo-csharp-parallel-tasks-plinq/",
+]
+BLOG_POSTS_HIST = [
+    # Atualizado em 2026-03-29 via rotate-posts.py (4 artigos)
     "/posts/2026/deno-bun-nodejs-comparativo-node-modules-angular/",
     "/posts/2026/efcore-bulkextensions-operacoes-massa-dotnet/",
     "/posts/2026/uv-python-gerenciador-pacotes-comparativo-csharp/",
