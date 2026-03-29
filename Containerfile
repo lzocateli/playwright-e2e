@@ -6,11 +6,14 @@
 # Base: Cópia da imagem Microsoft Playwright hospedada no Docker Hub
 FROM lzocateli/playwright:v1.49.0-noble
 
-# WireGuard tools (wg-quick) + curl (verificação de IP)
+# WireGuard tools (wg-quick) + utilitários de rede/DNS + curl (verificação de IP)
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       wireguard-tools \
-       curl \
+    iproute2 \
+    resolvconf \
+    iptables \
+    wireguard-tools \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Instalar uv (gerenciador Python rápido)
@@ -22,9 +25,11 @@ WORKDIR /app
 COPY pyproject.toml .python-version ./
 RUN uv sync --no-dev --frozen 2>/dev/null || uv sync --no-dev
 
-# Copiar código da aplicação
+# Copiar código da aplicação (sem configs de VPN)
 COPY conftest.py ./
-COPY vpn/ ./vpn/
+COPY vpn/__init__.py ./vpn/__init__.py
+COPY vpn/vpn_manager.py ./vpn/vpn_manager.py
+COPY vpn/conftest_vpn.py ./vpn/conftest_vpn.py
 COPY tests/ ./tests/
 
 # Diretórios para bind mounts

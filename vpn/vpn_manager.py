@@ -12,6 +12,7 @@ import json
 import logging
 import random
 import subprocess
+import tempfile
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -99,7 +100,9 @@ class VPNManager:
         try:
             self._run_wg_quick("down", self._current_conf)
         except RuntimeError:
-            logger.warning("VPN: falha ao desconectar de %s (pode já estar down)", location)
+            logger.warning(
+                "VPN: falha ao desconectar de %s (pode já estar down)", location
+            )
         finally:
             self._current_conf = None
             self._interface = None
@@ -134,16 +137,25 @@ class VPNManager:
         """
         try:
             result = subprocess.run(
-                ["curl", "-s", "--max-time", str(_IP_CHECK_TIMEOUT),
-                 "https://am.i.mullvad.net/json"],
-                capture_output=True, text=True, timeout=_IP_CHECK_TIMEOUT + 5,
+                [
+                    "curl",
+                    "-s",
+                    "--max-time",
+                    str(_IP_CHECK_TIMEOUT),
+                    "https://am.i.mullvad.net/json",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=_IP_CHECK_TIMEOUT + 5,
                 check=False,
             )
             if result.returncode == 0 and result.stdout.strip():
                 data = json.loads(result.stdout)
                 logger.info(
                     "VPN IP: %s (%s, %s) — Mullvad: %s",
-                    data.get("ip"), data.get("country"), data.get("city"),
+                    data.get("ip"),
+                    data.get("country"),
+                    data.get("city"),
                     data.get("mullvad_exit_ip"),
                 )
                 return data
@@ -158,12 +170,69 @@ class VPNManager:
 
     @staticmethod
     def _run_wg_quick(action: str, conf_path: Path) -> None:
-        """Executa wg-quick up/down."""
+        """Executa wg-quick up/down.
+
+        Em ambientes sem systemd/resolvconf funcional (ex.: WSL2 + podman rootless),
+        o wg-quick pode falhar ao aplicar DNS. Nesse caso, tenta novamente removendo
+        diretivas `DNS = ...` do .conf.
+        """
         cmd = ["wg-quick", action, str(conf_path)]
         result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=_CMD_TIMEOUT, check=False,
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=_CMD_TIMEOUT,
+            check=False,
         )
-        if result.returncode != 0:
-            raise RuntimeError(
-                f"wg-quick {action} falhou (rc={result.returncode}): {result.stderr.strip()}"
+        if result.returncode == 0:
+            return
+
+        stderr = (result.stderr or "").strip()
+        can_retry_without_dns = action == "up" and (
+            "resolvconf" in stderr or "sd_bus_open_system" in stderr
+        )
+
+        if can_retry_without_dns:
+            logger.info(
+                "VPN: wg-quick não conseguiu aplicar DNS via resolvconf (%s). "
+                "Aplicando fallback sem diretiva DNS (esperado em WSL2/Podman rootless).",
+                conf_path.name,
             )
+            temp_conf = VPNManager._create_temp_conf_without_dns(conf_path)
+            retry_cmd = ["wg-quick", action, str(temp_conf)]
+            retry = subprocess.run(
+                retry_cmd,
+                capture_output=True,
+                text=True,
+                timeout=_CMD_TIMEOUT,
+                check=False,
+            )
+            if retry.returncode == 0:
+                logger.info(
+                    "VPN: fallback sem DNS aplicado com sucesso para %s.",
+                    conf_path.name,
+                )
+                return
+            raise RuntimeError(
+                f"wg-quick {action} falhou (rc={retry.returncode}): {(retry.stderr or '').strip()}"
+            )
+
+        raise RuntimeError(
+            f"wg-quick {action} falhou (rc={result.returncode}): {stderr}"
+        )
+
+    @staticmethod
+    def _create_temp_conf_without_dns(conf_path: Path) -> Path:
+        """Cria cópia temporária do .conf removendo linhas DNS=... (case-insensitive).
+
+        Mantém o mesmo nome-base do arquivo para preservar o nome da interface WireGuard.
+        """
+        source_lines = conf_path.read_text(encoding="utf-8").splitlines()
+        filtered_lines = [
+            line for line in source_lines if not line.strip().lower().startswith("dns")
+        ]
+
+        temp_dir = Path(tempfile.mkdtemp(prefix="wg-no-dns-"))
+        temp_conf = temp_dir / conf_path.name
+        temp_conf.write_text("\n".join(filtered_lines) + "\n", encoding="utf-8")
+        return temp_conf

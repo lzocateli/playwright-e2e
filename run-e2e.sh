@@ -9,8 +9,9 @@ usage() {
 ${PROGRAM} v${VERSION}
 
 Wrapper para executar testes E2E com Playwright via Docker ou Podman.
-Constroi a imagem automaticamente (se necessario) e executa os testes
+Baixa a imagem publicada automaticamente (se necessario) e executa os testes
 dentro do container com suporte a VPN, simulacao humana e multi-browser.
+Se a imagem nao estiver disponivel no registry, faz o build local.
 
 O script detecta automaticamente docker ou podman (nesta ordem).
 
@@ -25,6 +26,7 @@ EXEMPLOS:
   ${PROGRAM} --enable-vpn --vpn-rotate per-test Rotacao VPN por teste
   ${PROGRAM} --browser chromium                 Browser especifico
   ${PROGRAM} --rebuild --base-url https://z.li  Reconstroi imagem
+    ${PROGRAM} --open-report --base-url https://z.li Abre relatorio ao finalizar
   ${PROGRAM} -- -k test_home                    Filtra testes pytest
 
 ──────────────────────────────────────────────────────────────
@@ -41,14 +43,16 @@ OPCOES
   --vpn-rotate MODE    per-test | per-session | off
                        Default: off
   --rebuild            Remove e reconstroi a imagem antes de executar
+    --open-report        Abre reports/report.html ao finalizar
   --                   Tudo apos '--' e passado diretamente ao pytest
 
 ──────────────────────────────────────────────────────────────
 IMAGEM
 ──────────────────────────────────────────────────────────────
-  Nome:       lzocateli/playwright-e2e
+    Nome:       lzocateli/playwright-e2e:v0.1.0
   Base:       lzocateli/playwright (copia de mcr.microsoft.com/playwright/python)
-  Build:      Automatico na primeira execucao (ou com --rebuild)
+    Pull:       Automatico na primeira execucao
+    Build:      Automatico apenas se a imagem nao estiver disponivel no registry
   Containerfile no diretorio do script
 
 ──────────────────────────────────────────────────────────────
@@ -96,7 +100,7 @@ case "${1:-}" in
     -h|--help) usage ;;
 esac
 
-IMAGE_NAME="playwright-e2e"
+IMAGE_NAME="lzocateli/playwright-e2e:v0.1.0"
 CONTAINER_NAME="e2e-runner"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -147,6 +151,8 @@ BROWSER=""
 HUMAN_SPEED="normal"
 ENABLE_VPN=false
 VPN_ROTATE="off"
+FORCE_REBUILD=false
+OPEN_REPORT=false
 EXTRA_PYTEST_ARGS=()
 
 while [[ $# -gt 0 ]]; do
@@ -156,13 +162,18 @@ while [[ $# -gt 0 ]]; do
         --human-speed)  HUMAN_SPEED="$2"; shift 2 ;;
         --enable-vpn)   ENABLE_VPN=true; shift ;;
         --vpn-rotate)   VPN_ROTATE="$2"; shift 2 ;;
-        --rebuild)      $CONTAINER_RT rmi -f "$IMAGE_NAME" 2>/dev/null; shift ;;
+        --rebuild)
+            FORCE_REBUILD=true
+            $CONTAINER_RT rmi -f "$IMAGE_NAME" 2>/dev/null || true
+            shift
+            ;;
+        --open-report)  OPEN_REPORT=true; shift ;;
         --)             shift; EXTRA_PYTEST_ARGS+=("$@"); break ;;
         *)              EXTRA_PYTEST_ARGS+=("$1"); shift ;;
     esac
 done
 
-# Build da imagem (se nao existir)
+# Pull/build da imagem (se nao existir)
 image_exists() {
     if [ "$CONTAINER_RT" = "docker" ]; then
         docker image inspect "$IMAGE_NAME" &>/dev/null
@@ -171,9 +182,15 @@ image_exists() {
     fi
 }
 
-if ! image_exists; then
-    echo "🔨 Construindo imagem $IMAGE_NAME ..."
+if [[ "$FORCE_REBUILD" == true ]]; then
+    echo "🔨 Reconstruindo imagem local $IMAGE_NAME ..."
     $CONTAINER_RT build -t "$IMAGE_NAME" -f "$SCRIPT_DIR/Containerfile" "$SCRIPT_DIR"
+elif ! image_exists; then
+    echo "📥 Baixando imagem $IMAGE_NAME ..."
+    if ! $CONTAINER_RT pull "$IMAGE_NAME"; then
+        echo "🔨 Imagem nao encontrada no registry; construindo localmente $IMAGE_NAME ..."
+        $CONTAINER_RT build -t "$IMAGE_NAME" -f "$SCRIPT_DIR/Containerfile" "$SCRIPT_DIR"
+    fi
 fi
 
 # Montar argumentos do pytest
@@ -206,6 +223,9 @@ fi
 CONTAINER_ARGS+=(
     -v "$SCRIPT_DIR/reports:/app/reports:Z"
     -v "$SCRIPT_DIR/tests:/app/tests:ro,Z"
+    -v "$SCRIPT_DIR/conftest.py:/app/conftest.py:ro,Z"
+    -v "$SCRIPT_DIR/vpn/conftest_vpn.py:/app/vpn/conftest_vpn.py:ro,Z"
+    -v "$SCRIPT_DIR/vpn/configs:/app/vpn/configs:ro,Z"
 )
 
 if [[ "$ENABLE_VPN" == true ]]; then
@@ -219,7 +239,6 @@ if [[ "$ENABLE_VPN" == true ]]; then
     CONTAINER_ARGS+=(
         --cap-add=NET_ADMIN
         --sysctl net.ipv4.conf.all.src_valid_mark=1
-        -v "$SCRIPT_DIR/vpn/configs:/app/vpn/configs:ro,Z"
     )
 fi
 
@@ -236,3 +255,22 @@ $CONTAINER_RT "${CONTAINER_ARGS[@]}" "$IMAGE_NAME" "${PYTEST_ARGS[@]}"
 
 echo ""
 echo "📊 Relatório: $SCRIPT_DIR/reports/report.html"
+
+if [[ "$OPEN_REPORT" == true ]]; then
+    REPORT_PATH="$SCRIPT_DIR/reports/report.html"
+
+    if [[ -f "$REPORT_PATH" ]]; then
+        if command -v xdg-open &>/dev/null; then
+            xdg-open "$REPORT_PATH" >/dev/null 2>&1 || true
+        elif command -v wslview &>/dev/null; then
+            wslview "$REPORT_PATH" >/dev/null 2>&1 || true
+        elif command -v powershell.exe &>/dev/null && command -v wslpath &>/dev/null; then
+            WIN_REPORT_PATH="$(wslpath -w "$REPORT_PATH")"
+            powershell.exe -NoProfile -Command "Start-Process -FilePath '$WIN_REPORT_PATH'" >/dev/null 2>&1 || true
+        else
+            echo "⚠️  Nao foi possivel abrir automaticamente. Abra manualmente: $REPORT_PATH"
+        fi
+    else
+        echo "⚠️  Relatorio nao encontrado em: $REPORT_PATH"
+    fi
+fi

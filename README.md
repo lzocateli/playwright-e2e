@@ -37,6 +37,8 @@ playwright-e2e/
 
 > **Nota**: Nenhuma instalação local de Python, browsers ou dependências é necessária.
 > Tudo roda dentro do container.
+> **Imagem executada pelo script**: `lzocateli/playwright-e2e:v0.1.0`.
+> Na primeira execução, o `run-e2e.sh` tenta baixar essa imagem do Docker Hub; se ela não existir no registry, faz o build local a partir do `Containerfile`.
 
 ## Execução
 
@@ -59,8 +61,14 @@ chmod +x run-e2e.sh
 # Browser específico
 ./run-e2e.sh --base-url https://zocate.li --browser chromium
 
+# Execução com todos os parametros
+./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed normal --open-report -- tests/test_blog_navigation.py
+
 # Reconstruir imagem
 ./run-e2e.sh --rebuild --base-url https://zocate.li
+
+# Abrir relatório automaticamente ao finalizar
+./run-e2e.sh --open-report --base-url https://zocate.li
 ```
 
 ## Opções CLI (pytest)
@@ -72,6 +80,7 @@ chmod +x run-e2e.sh
 | `--enable-vpn` | flag | desligado | Ativa conexão VPN WireGuard |
 | `--vpn-rotate` | `per-test`, `per-session`, `off` | `off` | Quando rotacionar VPN |
 | `--browser` | `chromium`, `firefox`, `webkit` | todos | Browser específico |
+| `--open-report` | flag | desligado | Abre `reports/report.html` automaticamente ao finalizar |
 
 ### Multiplicadores de velocidade
 
@@ -225,6 +234,9 @@ Após execução, confira em `reports/`:
 - `report.html` — Relatório HTML interativo
 - `videos/` — Gravação de cada teste (.webm)
 
+> **Importante**: para ver a lista completa de testes (pass/fail/skipped), abra o `report.html` no navegador do sistema.
+> O preview interno do VS Code pode desabilitar scripts e ocultar a tabela de resultados.
+
 ## Troubleshooting
 
 | Problema | Solução |
@@ -269,10 +281,46 @@ systemctl --no-pager status
 **Workaround imediato** (sem precisar reiniciar) — faça o build manualmente forçando `cgroupfs`:
 
 ```bash
-BUILDAH_ISOLATION=chroot podman build --cgroup-manager=cgroupfs -t playwright-e2e -f Containerfile .
+BUILDAH_ISOLATION=chroot podman build --cgroup-manager=cgroupfs -t lzocateli/playwright-e2e:v0.1.0 -f Containerfile .
 ```
 
 Após o build, o `run-e2e.sh` detecta que a imagem já existe e executa normalmente.
+
+### `docker save` falha com `reference does not exist`
+
+Se o erro acontecer, a tag informada no `docker save` não existe localmente.
+
+No Windows, liste as imagens disponíveis:
+
+```powershell
+docker images | Select-String "playwright-e2e|playwright"
+```
+
+Se existir apenas a imagem `vsc-playwright-e2e-...:latest`, crie a tag esperada pelo script:
+
+```powershell
+docker tag vsc-playwright-e2e-2965a087e0d801ef3f18cf67c9158520f27478a6b7f7191e2f14f6dbf9b67699:latest lzocateli/playwright-e2e:v0.1.0
+```
+
+Salve o `.tar` no Windows:
+
+```powershell
+docker save -o C:\Users\lzoca\projetos\playwright-e2e\playwright-e2e.tar lzocateli/playwright-e2e:v0.1.0
+```
+
+No WSL, valide o arquivo e carregue no Podman:
+
+```bash
+ls -lh /mnt/c/Users/lzoca/projetos/playwright-e2e/playwright-e2e.tar
+podman load -i /mnt/c/Users/lzoca/projetos/playwright-e2e/playwright-e2e.tar
+podman tag localhost/v0.1.0:latest lzocateli/playwright-e2e:v0.1.0
+```
+
+Depois execute normalmente:
+
+```bash
+./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed normal -- tests/test_blog_navigation.py
+```
 
 ## Tutorial: Publicar imagens no Docker Hub (Windows)
 
@@ -300,6 +348,8 @@ docker push lzocateli/playwright:v1.49.0-noble
 ```
 
 ### 3. Construir e enviar a imagem customizada (playwright-e2e)
+
+Essa e a imagem que o `run-e2e.sh` executa.
 
 ```powershell
 # Navegar até o diretório do projeto

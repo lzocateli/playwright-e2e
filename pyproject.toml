@@ -18,3 +18,4 @@ addopts = [
     "--self-contained-html",
     "-v",
 ]
+render_collapsed = false

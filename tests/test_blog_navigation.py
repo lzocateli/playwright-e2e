@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import pytest
 
-
 # URLs de posts para parametrizar (adicione ou altere conforme necessário)
 BLOG_POSTS = [
     # Últimos 4 artigos (março 2026)
@@ -66,7 +65,9 @@ class TestBlogPostNavigation:
         # Tempo de leitura geral
         slow_page.wait_reading(min_s=10, max_s=25)
 
-    def test_navigate_between_posts(self, slow_page, base_url: str, human_delay) -> None:
+    def test_navigate_between_posts(
+        self, slow_page, base_url: str, human_delay
+    ) -> None:
         """Navega da home para um post, volta, navega para outro."""
         slow_page.goto(base_url)
         human_delay(min_s=2, max_s=5)
@@ -104,9 +105,53 @@ class TestBlogMetaTags:
         slow_page.goto(base_url)
         images = slow_page.page.locator("img")
         count = images.count()
+        broken_images: list[str] = []
+
         for i in range(min(count, 10)):  # Verifica até 10 imagens
             img = images.nth(i)
             src = img.get_attribute("src")
             if src:
-                natural_width = img.evaluate("el => el.naturalWidth")
-                assert natural_width > 0, f"Imagem quebrada: {src}"
+                loaded_ok = img.evaluate("""
+                    (el) => {
+                        el.scrollIntoView({ block: "center", inline: "nearest" });
+
+                        return new Promise((resolve) => {
+                            const isOk = () => el.complete && el.naturalWidth > 0;
+
+                            if (el.complete) {
+                                resolve(isOk());
+                                return;
+                            }
+
+                            const timer = setTimeout(() => resolve(isOk()), 7000);
+
+                            el.addEventListener(
+                                "load",
+                                () => {
+                                    clearTimeout(timer);
+                                    resolve(isOk());
+                                },
+                                { once: true }
+                            );
+
+                            el.addEventListener(
+                                "error",
+                                () => {
+                                    clearTimeout(timer);
+                                    resolve(false);
+                                },
+                                { once: true }
+                            );
+                        });
+                    }
+                    """)
+
+                if not loaded_ok:
+                    current_src = img.get_attribute("currentSrc") or src
+                    broken_images.append(current_src)
+
+        assert (
+            not broken_images
+        ), "Imagens quebradas encontradas na home:\n" + "\n".join(
+            f"- {url}" for url in broken_images
+        )

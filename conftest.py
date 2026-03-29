@@ -8,13 +8,14 @@ Inclui:
 
 from __future__ import annotations
 
+import html
 import random
 import time
+from pathlib import Path
 from typing import Generator
 
 import pytest
 from playwright.sync_api import Page, BrowserContext
-
 
 # ---------------------------------------------------------------------------
 # CLI options
@@ -53,6 +54,9 @@ SPEED_MULTIPLIERS = {
     "normal": 1.0,
     "fast": 0.3,
 }
+
+
+_EXECUTED_TESTS: dict[str, str] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -127,14 +131,18 @@ class SlowPage:
         self._page.mouse.wheel(0, pixels)
         self._sleep(2.0, 5.0)
 
-    def scroll_to_bottom(self, step: int = 400, pause_min: float = 1.0, pause_max: float = 3.0) -> None:
+    def scroll_to_bottom(
+        self, step: int = 400, pause_min: float = 1.0, pause_max: float = 3.0
+    ) -> None:
         """Scroll progressivo até o final da página, simulando leitura."""
         prev_height = 0
         while True:
             self._page.mouse.wheel(0, step)
             self._sleep(pause_min, pause_max)
             current_height = self._page.evaluate("window.scrollY")
-            total_height = self._page.evaluate("document.body.scrollHeight - window.innerHeight")
+            total_height = self._page.evaluate(
+                "document.body.scrollHeight - window.innerHeight"
+            )
             if current_height >= total_height or current_height == prev_height:
                 break
             prev_height = current_height
@@ -172,4 +180,81 @@ def pytest_configure(config: pytest.Config) -> None:
     """Registra o plugin de VPN se --enable-vpn estiver ativo."""
     if config.getoption("--enable-vpn", default=False):
         from vpn.conftest_vpn import VPNPlugin
+
         config.pluginmanager.register(VPNPlugin(config), "vpn_plugin")
+
+
+def pytest_runtest_logreport(report: pytest.TestReport) -> None:
+    """Coleta status final por teste para seção estática no report.html."""
+    if report.when == "call":
+        _EXECUTED_TESTS[report.nodeid] = report.outcome
+        return
+
+    if report.when in {"setup", "teardown"} and report.failed:
+        _EXECUTED_TESTS.setdefault(report.nodeid, "error")
+
+
+def pytest_unconfigure(config: pytest.Config) -> None:
+    """Injeta lista estática de testes executados no report.html (sem JS)."""
+    html_path = getattr(config.option, "htmlpath", None)
+    if not html_path or not _EXECUTED_TESTS:
+        return
+
+    report_path = Path(str(html_path))
+    if not report_path.exists():
+        return
+
+    report_content = report_path.read_text(encoding="utf-8")
+    if 'id="executed-tests-static"' in report_content:
+        return
+
+    outcome_label = {
+        "passed": "PASS",
+        "failed": "FAIL",
+        "skipped": "SKIP",
+        "error": "ERROR",
+        "xfailed": "XFAIL",
+        "xpassed": "XPASS",
+    }
+
+    totals: dict[str, int] = {
+        "passed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "error": 0,
+        "xfailed": 0,
+        "xpassed": 0,
+    }
+
+    list_items: list[str] = []
+    for nodeid in sorted(_EXECUTED_TESTS):
+        outcome = _EXECUTED_TESTS[nodeid]
+        if outcome not in totals:
+            totals[outcome] = 0
+        totals[outcome] += 1
+        label = outcome_label.get(outcome, outcome.upper())
+        list_items.append(f"<li><strong>[{label}]</strong> {html.escape(nodeid)}</li>")
+
+    summary_parts = [
+        f"PASS: {totals.get('passed', 0)}",
+        f"FAIL: {totals.get('failed', 0)}",
+        f"SKIP: {totals.get('skipped', 0)}",
+        f"ERROR: {totals.get('error', 0)}",
+    ]
+
+    static_section = (
+        '<section id="executed-tests-static" '
+        'style="margin:16px 0;padding:12px;border:1px solid #e6e6e6;background:#fafafa">'
+        '<h2 style="margin-top:0">Itens testados (lista estática)</h2>'
+        f"<p>{' | '.join(summary_parts)}</p>"
+        '<ul style="max-height:480px;overflow:auto;padding-left:20px">'
+        f"{''.join(list_items)}"
+        "</ul>"
+        "</section>"
+    )
+
+    if "</body>" in report_content:
+        report_content = report_content.replace(
+            "</body>", f"{static_section}</body>", 1
+        )
+        report_path.write_text(report_content, encoding="utf-8")

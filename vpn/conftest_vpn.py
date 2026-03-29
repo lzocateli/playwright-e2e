@@ -48,7 +48,7 @@ class VPNPlugin:
     # Hooks por teste (rotação)
     # ------------------------------------------------------------------
 
-    @pytest.hookimpl(hookimpl=True)
+    @pytest.hookimpl
     def pytest_runtest_setup(self, item: pytest.Item) -> None:
         """Rotaciona VPN antes de cada teste, se configurado."""
         if self._rotate_mode == "per-test" and self._manager.current_location:
@@ -57,7 +57,9 @@ class VPNPlugin:
             ip_info = self._manager.get_current_ip()
             logger.info(
                 "VPN rotação: %s → %s | IP: %s",
-                old, new_loc, ip_info.get("ip", "desconhecido"),
+                old,
+                new_loc,
+                ip_info.get("ip", "desconhecido"),
             )
 
     # ------------------------------------------------------------------
