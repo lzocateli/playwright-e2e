@@ -18,6 +18,33 @@ class VPNPlugin:
         self._config = config
         self._manager = VPNManager()
         self._rotate_mode = config.getoption("--vpn-rotate", default="off")
+        self._strict_mode = config.getoption("--vpn-strict", default=False)
+
+    @staticmethod
+    def _is_mullvad_exit(ip_info: dict) -> bool:
+        value = ip_info.get("mullvad_exit_ip")
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.strip().lower() in {"1", "true", "yes"}
+        return False
+
+    def _enforce_vpn_strict(self, ip_info: dict, *, context: str) -> None:
+        if not self._strict_mode:
+            return
+
+        is_mullvad = self._is_mullvad_exit(ip_info)
+        ip_value = ip_info.get("ip", "desconhecido")
+
+        if not is_mullvad:
+            message = (
+                "VPN strict mode: saída não confirmada como Mullvad "
+                f"({context}). IP atual: {ip_value}. "
+                "Verifique conectividade do túnel e rotação."
+            )
+            if context == "sessionstart":
+                raise pytest.UsageError(message)
+            pytest.fail(message, pytrace=False)
 
     # ------------------------------------------------------------------
     # Hooks de sessão
@@ -33,6 +60,7 @@ class VPNPlugin:
 
         self._manager.connect()
         ip_info = self._manager.get_current_ip()
+        self._enforce_vpn_strict(ip_info, context="sessionstart")
         logger.info(
             "VPN sessão iniciada — Local: %s | IP: %s",
             self._manager.current_location,
@@ -55,6 +83,7 @@ class VPNPlugin:
             old = self._manager.current_location
             new_loc = self._manager.rotate()
             ip_info = self._manager.get_current_ip()
+            self._enforce_vpn_strict(ip_info, context="per-test rotation")
             logger.info(
                 "VPN rotação: %s → %s | IP: %s",
                 old,

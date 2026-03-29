@@ -58,11 +58,16 @@ chmod +x run-e2e.sh
 # VPN com rotação por teste + velocidade lenta
 ./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed slow
 
+# VPN estrita (falha se saída não for Mullvad)
+./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --vpn-strict
+
 # Browser específico
 ./run-e2e.sh --base-url https://zocate.li --browser chromium
 
 # Execução com todos os parametros
 ./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed normal --open-report -- tests/test_blog_navigation.py
+
+./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed normal --vpn-strict --open-report -- tests/test_blog_navigation.py
 
 # Reconstruir imagem
 ./run-e2e.sh --rebuild --base-url https://zocate.li
@@ -79,6 +84,7 @@ chmod +x run-e2e.sh
 | `--human-speed` | `slow`, `normal`, `fast` | `normal` | Intensidade dos delays humanos |
 | `--enable-vpn` | flag | desligado | Ativa conexão VPN WireGuard |
 | `--vpn-rotate` | `per-test`, `per-session`, `off` | `off` | Quando rotacionar VPN |
+| `--vpn-strict` | flag | desligado | Falha a execução se `mullvad_exit_ip` não for verdadeiro |
 | `--browser` | `chromium`, `firefox`, `webkit` | todos | Browser específico |
 | `--open-report` | flag | desligado | Abre `reports/report.html` automaticamente ao finalizar |
 

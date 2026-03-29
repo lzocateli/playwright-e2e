@@ -24,6 +24,7 @@ EXEMPLOS:
   ${PROGRAM} --base-url https://zocate.li       Site em producao
   ${PROGRAM} --enable-vpn --human-speed slow    VPN + delays longos
   ${PROGRAM} --enable-vpn --vpn-rotate per-test Rotacao VPN por teste
+    ${PROGRAM} --enable-vpn --vpn-strict          Falha se saída não for Mullvad
   ${PROGRAM} --browser chromium                 Browser especifico
   ${PROGRAM} --rebuild --base-url https://z.li  Reconstroi imagem
     ${PROGRAM} --open-report --base-url https://z.li Abre relatorio ao finalizar
@@ -42,6 +43,7 @@ OPCOES
                        Adiciona --cap-add=NET_ADMIN ao container
   --vpn-rotate MODE    per-test | per-session | off
                        Default: off
+    --vpn-strict         Falha se a saída não for Mullvad
   --rebuild            Remove e reconstroi a imagem antes de executar
     --open-report        Abre reports/report.html ao finalizar
   --                   Tudo apos '--' e passado diretamente ao pytest
@@ -151,6 +153,7 @@ BROWSER=""
 HUMAN_SPEED="normal"
 ENABLE_VPN=false
 VPN_ROTATE="off"
+VPN_STRICT=false
 FORCE_REBUILD=false
 OPEN_REPORT=false
 EXTRA_PYTEST_ARGS=()
@@ -162,6 +165,7 @@ while [[ $# -gt 0 ]]; do
         --human-speed)  HUMAN_SPEED="$2"; shift 2 ;;
         --enable-vpn)   ENABLE_VPN=true; shift ;;
         --vpn-rotate)   VPN_ROTATE="$2"; shift 2 ;;
+        --vpn-strict)   VPN_STRICT=true; shift ;;
         --rebuild)
             FORCE_REBUILD=true
             $CONTAINER_RT rmi -f "$IMAGE_NAME" 2>/dev/null || true
@@ -205,6 +209,9 @@ fi
 
 if [[ "$ENABLE_VPN" == true ]]; then
     PYTEST_ARGS+=("--enable-vpn" "--vpn-rotate=$VPN_ROTATE")
+    if [[ "$VPN_STRICT" == true ]]; then
+        PYTEST_ARGS+=("--vpn-strict")
+    fi
 fi
 
 PYTEST_ARGS+=("${EXTRA_PYTEST_ARGS[@]}")
@@ -248,6 +255,7 @@ echo "   Runtime:    $CONTAINER_RT"
 echo "   URL:        $BASE_URL"
 echo "   Speed:      $HUMAN_SPEED"
 echo "   VPN:        $ENABLE_VPN (rotate: $VPN_ROTATE)"
+echo "   VPN strict: $VPN_STRICT"
 echo "   Browser:    ${BROWSER:-todos}"
 echo ""
 

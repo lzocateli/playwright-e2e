@@ -3,7 +3,7 @@
 Inclui:
 - Configuração de browser context (viewport, locale, vídeo)
 - Fixtures de sleep/delay para simular comportamento real de usuário
-- CLI options: --base-url, --human-speed, --enable-vpn, --vpn-rotate
+- CLI options: --base-url, --human-speed, --enable-vpn, --vpn-rotate, --vpn-strict
 """
 
 from __future__ import annotations
@@ -42,6 +42,15 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         choices=["per-test", "per-session", "off"],
         default="off",
         help="Rotação de VPN: per-test, per-session, ou off (default: off)",
+    )
+    group.addoption(
+        "--vpn-strict",
+        action="store_true",
+        default=False,
+        help=(
+            "Falha a execução se a saída não for Mullvad "
+            "(valida mullvad_exit_ip no início da sessão e após rotações)"
+        ),
     )
 
 
