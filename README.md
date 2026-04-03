@@ -35,11 +35,93 @@ playwright-e2e/
 
 - [Podman](https://podman.io/) (rootless)
 - **Opcional**: Conta [Mullvad VPN](https://mullvad.net/) (para testes com VPN)
+- **Opcional**: [uv](https://docs.astral.sh/uv/) (para usar `--rotate-posts`)
 
 > **Nota**: Nenhuma instalação local de Python, browsers ou dependências é necessária.
 > Tudo roda dentro do container.
 > **Imagem executada pelo script**: `lzocateli/playwright-e2e:v0.1.0`.
 > Na primeira execução, o `run-e2e.sh` tenta baixar essa imagem do Docker Hub; se ela não existir no registry, faz o build local a partir do `Containerfile`.
+
+## Instalando uv (opcional)
+
+`uv` é necessário apenas se você pretende usar o flag `--rotate-posts` no `run-e2e.sh` para rotacionar automaticamente artigos do blog antes dos testes.
+
+### Linux
+
+**Opção 1: Instalador oficial (recomendado)**
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Após instalar, adicione `uv` ao `$PATH`:
+
+```bash
+# Adicione esta linha ao ~/.bashrc, ~/.zshrc ou ~/.profile
+export PATH="$HOME/.local/bin:$PATH"
+
+# Aplique imediatamente
+source ~/.bashrc  # ou ~/.zshrc
+```
+
+Verifique a instalação:
+
+```bash
+uv --version
+```
+
+**Opção 2: Via package manager (se disponível na distro)**
+
+```bash
+# Ubuntu/Debian
+sudo apt-get install uv
+
+# Fedora/RHEL
+sudo dnf install uv
+
+# Arch
+sudo pacman -S uv
+
+# Homebrew (macOS e Linux)
+brew install uv
+```
+
+### macOS
+
+```bash
+# Via Homebrew (recomendado)
+brew install uv
+
+# Ou via instalador oficial
+curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+### Windows (WSL2)
+
+Dentro do WSL2, execute o mesmo comando do Linux:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Ou via package manager:
+
+```bash
+# Apt (Ubuntu/Debian no WSL)
+sudo apt-get install uv
+
+# Scoop (PowerShell nativo do Windows)
+scoop install uv
+```
+
+### Verificar instalação
+
+```bash
+uv --version
+uv python --version
+```
 
 ## Execução
 
@@ -73,6 +155,18 @@ chmod +x run-e2e.sh
 
 # Abrir automaticamente o primeiro vídeo (.webm)
 ./run-e2e.sh --open-first-video --base-url https://zocate.li
+
+# Rotacionar posts do blog antes dos testes (requer uv)
+./run-e2e.sh --base-url https://zocate.li --rotate-posts
+
+# Rotacionar posts com range customizado
+./run-e2e.sh --base-url https://zocate.li --rotate-posts --min-posts 2 --max-posts 5
+
+# Preview da rotação (sem alterar arquivo de teste)
+./run-e2e.sh --base-url https://zocate.li --rotate-posts --dry-run-rotate
+
+# Rotacionar + limpar histórico
+./run-e2e.sh --base-url https://zocate.li --rotate-posts --reset-hist
 
 # Execução com todos os parametros
 ./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed normal --vpn-strict --open-report --open-first-video -- tests/test_blog_navigation.py
@@ -128,6 +222,11 @@ uv run rotate-posts.py --reset-hist
 | `--browser` | `chromium`, `firefox`, `webkit` | todos | Browser específico |
 | `--open-report` | flag | desligado | Abre `reports/report.html` automaticamente ao finalizar |
 | `--open-first-video` | flag | desligado | Abre o primeiro `.webm` de `reports/videos` automaticamente |
+| `--rotate-posts` | flag | desligado | Rotaciona artigos do blog antes dos testes (requer `uv`) |
+| `--min-posts` | inteiro | `3` | Posts mínimos a selecionar (usado com `--rotate-posts`) |
+| `--max-posts` | inteiro | `6` | Posts máximos a selecionar (usado com `--rotate-posts`) |
+| `--reset-hist` | flag | desligado | Limpa histórico de posts antes de rotacionar (usado com `--rotate-posts`) |
+| `--dry-run-rotate` | flag | desligado | Preview da rotação sem alterar arquivo (usado com `--rotate-posts`) |
 
 ### Multiplicadores de velocidade
 

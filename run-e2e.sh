@@ -29,6 +29,9 @@ EXEMPLOS:
   ${PROGRAM} --rebuild --base-url https://z.li  Reconstroi imagem
   ${PROGRAM} --open-report --base-url https://z.li Abre relatorio ao finalizar
   ${PROGRAM} --open-first-video --base-url https://z.li Abre o primeiro .webm
+  ${PROGRAM} --rotate-posts                     Rotaciona posts antes dos testes
+  ${PROGRAM} --rotate-posts --min-posts 2 --max-posts 5 Posts customizados
+  ${PROGRAM} --rotate-posts --dry-run-rotate    Preview da rotacao sem aplicar
   ${PROGRAM} -- -k test_home                    Filtra testes pytest
 
 ──────────────────────────────────────────────────────────────
@@ -48,6 +51,16 @@ OPCOES
   --rebuild            Remove e reconstroi a imagem antes de executar
   --open-report        Abre reports/report.html ao finalizar
   --open-first-video   Abre o primeiro .webm em reports/videos ao finalizar
+  --rotate-posts       Rotaciona artigos do blog antes dos testes
+                       Requer 'uv' instalado no host
+  --min-posts N        Posts minimos a selecionar (default: 3)
+                       So usado com --rotate-posts
+  --max-posts N        Posts maximos a selecionar (default: 6)
+                       Deve ser >= --min-posts
+  --reset-hist         Limpa BLOG_POSTS_HIST antes de rotacionar
+                       Requer --rotate-posts
+  --dry-run-rotate     Preview da rotacao sem alterar o arquivo de teste
+                       Requer --rotate-posts
   --                   Tudo apos '--' e passado diretamente ao pytest
 
 ──────────────────────────────────────────────────────────────
@@ -84,10 +97,13 @@ DEPENDENCIAS
                        Docker: https://docs.docker.com/get-docker/
                        Podman: https://podman.io/docs/installation
                        Deteccao: docker tem prioridade; se ausente, usa podman
+  uv                   UV package manager (somente se --rotate-posts)
+                       https://docs.astral.sh/uv/
   Containerfile        Deve existir no diretorio do script
   tests/               Diretorio com roteiros pytest
   vpn/configs/*.conf   Configs WireGuard (somente se --enable-vpn)
                        Gerar em: https://mullvad.net/account/wireguard-config
+  rotate-posts.py      Script de rotacao (somente se --rotate-posts)
 
 ──────────────────────────────────────────────────────────────
 EVIDENCIAS
@@ -103,6 +119,38 @@ USAGE
 case "${1:-}" in
     -h|--help) usage ;;
 esac
+
+execute_rotate_posts() {
+    echo "🔄 Rotacionando posts do blog..."
+    
+    set +e
+    local rotate_cmd=(uv run rotate-posts.py)
+    rotate_cmd+=(--base-url="$BASE_URL")
+    rotate_cmd+=(--min-posts="$MIN_POSTS")
+    rotate_cmd+=(--max-posts="$MAX_POSTS")
+    
+    if [[ "$RESET_HIST" == true ]]; then
+        rotate_cmd+=(--reset-hist)
+    fi
+    
+    if [[ "$DRY_RUN_ROTATE" == true ]]; then
+        rotate_cmd+=(--dry-run)
+    fi
+    
+    rotate_cmd+=(--test-file="$SCRIPT_DIR/tests/test_blog_navigation.py")
+    
+    if ! "${rotate_cmd[@]}"; then
+        echo "❌ Erro ao rotacionar posts" >&2
+        set -e
+        return 1
+    fi
+    
+    set -e
+    if [[ "$DRY_RUN_ROTATE" != true ]]; then
+        echo "✅ Posts rotacionados com sucesso"
+    fi
+}
+
 
 IMAGE_NAME="lzocateli/playwright-e2e:v0.1.0"
 CONTAINER_NAME="e2e-runner"
@@ -138,6 +186,14 @@ check_dependencies() {
         missing=1
     fi
 
+    if [[ "$ROTATE_POSTS" == true ]]; then
+        if ! command -v uv &>/dev/null; then
+            echo "❌ 'uv' nao encontrado (requerido para --rotate-posts)" >&2
+            echo "   Instale em: https://docs.astral.sh/uv/" >&2
+            missing=1
+        fi
+    fi
+
     if [ $missing -ne 0 ]; then
         echo "" >&2
         echo "Abortado. Corrija as dependencias acima antes de executar." >&2
@@ -145,8 +201,6 @@ check_dependencies() {
         exit 1
     fi
 }
-
-check_dependencies
 
 echo "⚙️  Container runtime: $CONTAINER_RT"
 
@@ -159,7 +213,14 @@ VPN_STRICT=false
 FORCE_REBUILD=false
 OPEN_REPORT=false
 OPEN_FIRST_VIDEO=false
+ROTATE_POSTS=false
+MIN_POSTS=3
+MAX_POSTS=6
+RESET_HIST=false
+DRY_RUN_ROTATE=false
 EXTRA_PYTEST_ARGS=()
+
+check_dependencies
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -176,6 +237,11 @@ while [[ $# -gt 0 ]]; do
             ;;
         --open-report)  OPEN_REPORT=true; shift ;;
         --open-first-video) OPEN_FIRST_VIDEO=true; shift ;;
+        --rotate-posts) ROTATE_POSTS=true; shift ;;
+        --min-posts)    MIN_POSTS="$2"; shift 2 ;;
+        --max-posts)    MAX_POSTS="$2"; shift 2 ;;
+        --reset-hist)   RESET_HIST=true; shift ;;
+        --dry-run-rotate) DRY_RUN_ROTATE=true; shift ;;
         --)             shift; EXTRA_PYTEST_ARGS+=("$@"); break ;;
         *)              EXTRA_PYTEST_ARGS+=("$1"); shift ;;
     esac
@@ -255,12 +321,19 @@ fi
 
 # Executar
 echo "🚀 Executando testes E2E..."
-echo "   Runtime:    $CONTAINER_RT"
-echo "   URL:        $BASE_URL"
-echo "   Speed:      $HUMAN_SPEED"
-echo "   VPN:        $ENABLE_VPN (rotate: $VPN_ROTATE)"
-echo "   VPN strict: $VPN_STRICT"
-echo "   Browser:    ${BROWSER:-todos}"
+echo "   Runtime:        $CONTAINER_RT"
+echo "   URL:            $BASE_URL"
+echo "   Speed:          $HUMAN_SPEED"
+echo "   VPN:            $ENABLE_VPN (rotate: $VPN_ROTATE)"
+echo "   VPN strict:     $VPN_STRICT"
+echo "   Browser:        ${BROWSER:-todos}"
+echo "   Rotate posts:   $ROTATE_POSTS (dry-run: $DRY_RUN_ROTATE)"
+echo ""
+
+if [[ "$ROTATE_POSTS" == true ]]; then
+    execute_rotate_posts
+fi
+
 echo ""
 
 $CONTAINER_RT "${CONTAINER_ARGS[@]}" "$IMAGE_NAME" "${PYTEST_ARGS[@]}"

@@ -11,18 +11,23 @@ from __future__ import annotations
 import pytest
 
 BLOG_POSTS = [
-    # Selecionados aleatoriamente em 2026-03-29 via rotate-posts.py
-    "/posts/2026/logging-estruturado-dinamico-dotnet8-azure-appinsights/",
-    "/posts/2025/design-api-rest-verbos-http-parameter-binding-aspnet-core/",
-    "/posts/2026/bff-backend-for-frontend-seguranca/",
-    "/posts/2025/paralelismo-csharp-parallel-tasks-plinq/",
+    # Selecionados aleatoriamente em 2026-04-03 via rotate-posts.py
+    "/posts/2026/ia-vai-substituir-desenvolvedores-opiniao/",
+    "/posts/2026/dotnet-worker-background-service-processamento-alto-volume/",
+    "/posts/2025/arquitetura-software-gof-padroes-cloud-microservicos/",
+    "/posts/2026/paginacao-api-rest-csharp-efcore-sqlserver-oracle-postgres/",
+    "/posts/2025/github-copilot-agentes-ia-modelos-guia-completo/",
 ]
 BLOG_POSTS_HIST = [
-    # Atualizado em 2026-03-29 via rotate-posts.py (4 artigos)
+    # Atualizado em 2026-04-03 via rotate-posts.py (8 artigos)
     "/posts/2026/deno-bun-nodejs-comparativo-node-modules-angular/",
     "/posts/2026/efcore-bulkextensions-operacoes-massa-dotnet/",
     "/posts/2026/uv-python-gerenciador-pacotes-comparativo-csharp/",
     "/posts/2026/ia-llm-rag-agents-mcp-guia-profissional/",
+    "/posts/2026/logging-estruturado-dinamico-dotnet8-azure-appinsights/",
+    "/posts/2025/design-api-rest-verbos-http-parameter-binding-aspnet-core/",
+    "/posts/2026/bff-backend-for-frontend-seguranca/",
+    "/posts/2025/paralelismo-csharp-parallel-tasks-plinq/",
 ]
 
 
