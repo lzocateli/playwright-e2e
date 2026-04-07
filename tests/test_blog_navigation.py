@@ -11,15 +11,16 @@ from __future__ import annotations
 import pytest
 
 BLOG_POSTS = [
-    # Selecionados aleatoriamente em 2026-04-03 via rotate-posts.py
-    "/posts/2026/ia-vai-substituir-desenvolvedores-opiniao/",
-    "/posts/2026/dotnet-worker-background-service-processamento-alto-volume/",
-    "/posts/2025/arquitetura-software-gof-padroes-cloud-microservicos/",
-    "/posts/2026/paginacao-api-rest-csharp-efcore-sqlserver-oracle-postgres/",
-    "/posts/2025/github-copilot-agentes-ia-modelos-guia-completo/",
+    # Selecionados aleatoriamente em 2026-04-07 via rotate-posts.py
+    "/posts/2025/diferenca-executar-script-terminal-pipeline/",
+    "/posts/2026/blazor-wasm-crud-radzen-tutorial-dotnet10/",
+    "/posts/2026/efcore-fluent-api-mapeamento-desacoplamento/",
+    "/posts/2026/logging-estruturado-dinamico-dotnet8-azure-appinsights/",
+    "/posts/2025/design-api-rest-verbos-http-parameter-binding-aspnet-core/",
+    "/posts/2026/bff-backend-for-frontend-seguranca/"
 ]
 BLOG_POSTS_HIST = [
-    # Atualizado em 2026-04-03 via rotate-posts.py (8 artigos)
+    # Atualizado em 2026-04-07 via rotate-posts.py (18 artigos)
     "/posts/2026/deno-bun-nodejs-comparativo-node-modules-angular/",
     "/posts/2026/efcore-bulkextensions-operacoes-massa-dotnet/",
     "/posts/2026/uv-python-gerenciador-pacotes-comparativo-csharp/",
@@ -28,6 +29,16 @@ BLOG_POSTS_HIST = [
     "/posts/2025/design-api-rest-verbos-http-parameter-binding-aspnet-core/",
     "/posts/2026/bff-backend-for-frontend-seguranca/",
     "/posts/2025/paralelismo-csharp-parallel-tasks-plinq/",
+    "/posts/2026/ia-vai-substituir-desenvolvedores-opiniao/",
+    "/posts/2026/dotnet-worker-background-service-processamento-alto-volume/",
+    "/posts/2025/arquitetura-software-gof-padroes-cloud-microservicos/",
+    "/posts/2026/paginacao-api-rest-csharp-efcore-sqlserver-oracle-postgres/",
+    "/posts/2025/github-copilot-agentes-ia-modelos-guia-completo/",
+    "/posts/2026/autenticacao-autorizacao-jwt-oauth2-openid/",
+    "/posts/2025/programador-pragmatico-licoes-praticas/",
+    "/posts/2026/google-adsense-analytics-seo-hugo/",
+    "/posts/2026/pipeline-configuracao-dotnet8-ioptions-secrets-docker/",
+    "/posts/2025/makefile-automatizando-python-hugo-docker/",
 ]
 
 

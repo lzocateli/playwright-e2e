@@ -21,23 +21,20 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 WORKDIR /app
 
-# Copiar definição de projeto e instalar dependências
+# Copiar definição de projeto e instalar dependências (cached no build)
 COPY pyproject.toml .python-version ./
 RUN uv sync --no-dev --frozen 2>/dev/null || uv sync --no-dev
 
-# Copiar código da aplicação (sem configs de VPN)
-COPY conftest.py ./
-COPY vpn/__init__.py ./vpn/__init__.py
-COPY vpn/vpn_manager.py ./vpn/vpn_manager.py
-COPY vpn/conftest_vpn.py ./vpn/conftest_vpn.py
-COPY tests/ ./tests/
+# Código-fonte NÃO é copiado — montado via bind volume no runtime.
+# Isso elimina drift entre host e container e dispensa rebuild para mudanças de código.
+ENV PYTHONPATH=/app
 
 # Diretórios para bind mounts
-RUN mkdir -p /app/reports /app/vpn/configs
+RUN mkdir -p /app/reports /app/tests /app/vpn /app/vpn/configs
 
 # Instalar browsers do Playwright
 RUN uv run playwright install --with-deps chromium firefox webkit
 
 # Entrypoint: rodar testes via uv
-ENTRYPOINT ["uv", "run", "pytest"]
+ENTRYPOINT ["uv", "run", "pytest", "--confcutdir=/app"]
 CMD ["--base-url=http://host.containers.internal:1313"]

@@ -33,11 +33,34 @@ playwright-e2e/
 
 ## Pré-requisitos
 
-- [Podman](https://podman.io/) (rootless)
+- [Docker](https://docs.docker.com/get-docker/) ou [Podman](https://podman.io/) (rootless)
+- **Windows**: [WSL2](https://learn.microsoft.com/pt-br/windows/wsl/install) com Docker Desktop ou Podman instalado dentro da distro
 - **Opcional**: Conta [Mullvad VPN](https://mullvad.net/) (para testes com VPN)
 - **Opcional**: [uv](https://docs.astral.sh/uv/) (para usar `--rotate-posts`)
 
 > **Nota**: Nenhuma instalação local de Python, browsers ou dependências é necessária.
+> O código-fonte (testes, fixtures, VPN manager) é montado via bind volume no runtime — não é copiado para dentro da imagem.
+> Qualquer alteração local em testes ou fixtures é refletida imediatamente, sem necessidade de `--rebuild`.
+
+### Execução no Windows (WSL2)
+
+O script `run-e2e.sh` requer bash. No Windows, execute de dentro do WSL2:
+
+```bash
+# Abra o terminal WSL2 e navegue até o projeto
+cd /mnt/c/Users/<seu-usuario>/projetos/playwright-e2e
+
+# Execução normal
+./run-e2e.sh --base-url https://zocate.li
+
+# Execução completa (VPN + rotação + relatório + vídeo)
+./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed normal --vpn-strict --open-report --open-first-video --rotate-posts -- tests/test_blog_navigation.py
+
+# Ou via PowerShell (invocando WSL):
+# wsl bash ./run-e2e.sh --base-url https://zocate.li
+```
+
+> **PowerShell/CMD nativos** não executam `.sh` diretamente. Use sempre WSL2 como shell.
 > Tudo roda dentro do container.
 > **Imagem executada pelo script**: `lzocateli/playwright-e2e:v0.1.0`.
 > Na primeira execução, o `run-e2e.sh` tenta baixar essa imagem do Docker Hub; se ela não existir no registry, faz o build local a partir do `Containerfile`.
@@ -169,7 +192,7 @@ chmod +x run-e2e.sh
 ./run-e2e.sh --base-url https://zocate.li --rotate-posts --reset-hist
 
 # Execução com todos os parametros
-./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed normal --vpn-strict --open-report --open-first-video -- tests/test_blog_navigation.py
+./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed normal --vpn-strict --open-report --open-first-video --rotate-posts -- tests/test_blog_navigation.py
 ```
 
 ## Rotação automática de artigos
@@ -219,7 +242,7 @@ uv run rotate-posts.py --reset-hist
 | `--enable-vpn` | flag | desligado | Ativa conexão VPN WireGuard |
 | `--vpn-rotate` | `per-test`, `per-session`, `off` | `off` | Quando rotacionar VPN |
 | `--vpn-strict` | flag | desligado | Falha a execução se `mullvad_exit_ip` não for verdadeiro |
-| `--browser` | `chromium`, `firefox`, `webkit` | todos | Browser específico |
+| `--browser` | `chromium`, `firefox`, `webkit` | aleatório | Browser específico (se omitido, escolhido aleatoriamente) |
 | `--open-report` | flag | desligado | Abre `reports/report.html` automaticamente ao finalizar |
 | `--open-first-video` | flag | desligado | Abre o primeiro `.webm` de `reports/videos` automaticamente |
 | `--rotate-posts` | flag | desligado | Rotaciona artigos do blog antes dos testes (requer `uv`) |
@@ -398,6 +421,7 @@ Quando VPN está ativa, o relatório também inclui contexto da VPN por teste:
 | Browser timeout | Aumentar timeout: `--timeout 60000` |
 | Imagem desatualizada | Usar `./run-e2e.sh --rebuild` |
 | Vídeos não gravados | Confirmar diretório `reports/videos/` montado |
+| Alterações em testes não refletidas | Verificar se `--rebuild` não é necessário (bind volume já monta código do host); confirmar que o container usa a versão mais recente da imagem |
 | `sd-bus call: Permission denied` no build (WSL2) | Ver seção abaixo |
 
 ### Build falha com `sd-bus call: Permission denied` no WSL2
@@ -556,7 +580,7 @@ mkdir -p /home/lzocateli/projs/playwright-e2e/vpn/configs
 cp -r /mnt/c/Users/lzoca/projetos/playwright-e2e/vpn/configs/* /home/lzocateli/projs/playwright-e2e/vpn/configs/
 
 # Exemplo de execução real
-./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed normal -- tests/test_blog_navigation.py
+./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed normal --vpn-strict --open-report --open-first-video --rotate-posts -- tests/test_blog_navigation.py
 ```
 
 ### Atualizando versões

@@ -40,7 +40,7 @@ OPCOES
   --base-url URL       URL do site a testar
                        Default: http://host.containers.internal:1313
   --browser BROWSER    chromium | firefox | webkit
-                       Default: todos
+                       Default: aleatorio (escolhido automaticamente)
   --human-speed SPEED  slow (2x) | normal (1x) | fast (0.3x)
                        Default: normal
   --enable-vpn         Ativa VPN WireGuard (requer configs em vpn/configs/)
@@ -273,9 +273,13 @@ PYTEST_ARGS=(
     "--human-speed=$HUMAN_SPEED"
 )
 
-if [[ -n "$BROWSER" ]]; then
-    PYTEST_ARGS+=("--browser" "$BROWSER")
+# Selecionar browser aleatoriamente se nenhum foi especificado
+if [[ -z "$BROWSER" ]]; then
+    _BROWSERS=(chromium firefox webkit)
+    BROWSER="${_BROWSERS[$((RANDOM % ${#_BROWSERS[@]}))]}"
 fi
+
+PYTEST_ARGS+=("--browser" "$BROWSER")
 
 if [[ "$ENABLE_VPN" == true ]]; then
     PYTEST_ARGS+=("--enable-vpn" "--vpn-rotate=$VPN_ROTATE")
@@ -297,12 +301,16 @@ if [ "$CONTAINER_RT" = "podman" ]; then
     CONTAINER_ARGS+=(--network slirp4netns)
 fi
 
+# Bind volume total: código-fonte montado do host (sem COPY na imagem).
+# Flags :Z removidas para compatibilidade cross-platform (Docker Desktop / WSL2).
 CONTAINER_ARGS+=(
-    -v "$SCRIPT_DIR/reports:/app/reports:Z"
-    -v "$SCRIPT_DIR/tests:/app/tests:ro,Z"
-    -v "$SCRIPT_DIR/conftest.py:/app/conftest.py:ro,Z"
-    -v "$SCRIPT_DIR/vpn/conftest_vpn.py:/app/vpn/conftest_vpn.py:ro,Z"
-    -v "$SCRIPT_DIR/vpn/configs:/app/vpn/configs:ro,Z"
+    -v "$SCRIPT_DIR/reports:/app/reports"
+    -v "$SCRIPT_DIR/tests:/app/tests:ro"
+    -v "$SCRIPT_DIR/conftest.py:/app/conftest.py:ro"
+    -v "$SCRIPT_DIR/vpn/__init__.py:/app/vpn/__init__.py:ro"
+    -v "$SCRIPT_DIR/vpn/vpn_manager.py:/app/vpn/vpn_manager.py:ro"
+    -v "$SCRIPT_DIR/vpn/conftest_vpn.py:/app/vpn/conftest_vpn.py:ro"
+    -v "$SCRIPT_DIR/vpn/configs:/app/vpn/configs:ro"
 )
 
 if [[ "$ENABLE_VPN" == true ]]; then
@@ -326,7 +334,7 @@ echo "   URL:            $BASE_URL"
 echo "   Speed:          $HUMAN_SPEED"
 echo "   VPN:            $ENABLE_VPN (rotate: $VPN_ROTATE)"
 echo "   VPN strict:     $VPN_STRICT"
-echo "   Browser:        ${BROWSER:-todos}"
+echo "   Browser:        $BROWSER"
 echo "   Rotate posts:   $ROTATE_POSTS (dry-run: $DRY_RUN_ROTATE)"
 echo ""
 
