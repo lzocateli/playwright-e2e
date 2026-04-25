@@ -188,6 +188,11 @@ def slow_page(page: Page, speed_multiplier: float) -> SlowPage:
 def pytest_configure(config: pytest.Config) -> None:
     """Registra o plugin de VPN se --enable-vpn estiver ativo."""
     if config.getoption("--enable-vpn", default=False):
+        import sys
+
+        _src = str(Path(__file__).resolve().parent.parent / "src")
+        if _src not in sys.path:
+            sys.path.insert(0, _src)
         from vpn.conftest_vpn import VPNPlugin
 
         configs_dir = Path(str(config.rootdir)) / "vpn" / "configs"

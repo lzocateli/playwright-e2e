@@ -557,7 +557,3 @@ docker push lzocateli/playwright-e2e:v0.2.0
 ## Licença
 
 Este projeto é distribuído sob a licença MIT. Veja o arquivo [LICENSE](LICENSE).
-
-## Licença
-
-Este projeto é distribuído sob a licença MIT. Veja o arquivo [LICENSE](LICENSE).

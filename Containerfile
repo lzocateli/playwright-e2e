@@ -25,6 +25,9 @@ WORKDIR /app
 COPY pyproject.toml .python-version ./
 RUN uv sync --no-dev --no-install-project --frozen 2>/dev/null || uv sync --no-dev --no-install-project
 
+# Garante que src/ esteja sempre no sys.path via .pth file (robusto contra override do PYTHONPATH pelo uv run)
+RUN uv run python -c "import site; open(site.getsitepackages()[0] + '/playwright_e2e.pth', 'w').write('/app/src\n')"
+
 # Código-fonte NÃO é copiado — montado via bind volume no runtime.
 # Isso elimina drift entre host e container e dispensa rebuild para mudanças de código.
 ENV PYTHONPATH=/app/src
