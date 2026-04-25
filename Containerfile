@@ -23,14 +23,14 @@ WORKDIR /app
 
 # Copiar definição de projeto e instalar dependências (cached no build)
 COPY pyproject.toml .python-version ./
-RUN uv sync --no-dev --frozen 2>/dev/null || uv sync --no-dev
+RUN uv sync --no-dev --no-install-project --frozen 2>/dev/null || uv sync --no-dev --no-install-project
 
 # Código-fonte NÃO é copiado — montado via bind volume no runtime.
 # Isso elimina drift entre host e container e dispensa rebuild para mudanças de código.
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app/src
 
 # Diretórios para bind mounts
-RUN mkdir -p /app/reports /app/tests /app/vpn /app/vpn/configs
+RUN mkdir -p /app/reports /app/tests /app/src/e2e /app/src/vpn /app/vpn/configs
 
 # Instalar browsers do Playwright
 RUN uv run playwright install --with-deps chromium firefox webkit

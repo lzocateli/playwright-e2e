@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Rotaciona artigos do blog para testes E2E.
 
 Lê o sitemap.xml, seleciona aleatoriamente artigos novos para BLOG_POSTS
@@ -20,7 +19,7 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 VERSION = "0.1.0"
-PROGRAM = "rotate-posts.py"
+PROGRAM = "rotate-posts"
 
 SITEMAP_NS = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
 POSTS_PATTERN = re.compile(r"^(# [^\n]*\n)?BLOG_POSTS\s*=\s*\[([^\]]*)\]", re.MULTILINE)
@@ -61,7 +60,7 @@ def parse_args() -> argparse.Namespace:
             ──────────────────────────────────────────────────────────────
             FLUXO
             ──────────────────────────────────────────────────────────────
-              1. Busca {'{base_url}'}/sitemap.xml e extrai URLs de /posts/
+              1. Busca {{base_url}}/sitemap.xml e extrai URLs de /posts/
               2. Lê BLOG_POSTS e BLOG_POSTS_HIST do arquivo de teste
               3. Move BLOG_POSTS atual → BLOG_POSTS_HIST (acumula)
               4. Seleciona aleatoriamente N artigos novos (nunca testados)
@@ -73,7 +72,7 @@ def parse_args() -> argparse.Namespace:
             ARQUIVO DE TESTE
             ──────────────────────────────────────────────────────────────
               Por padrão, o script detecta automaticamente o arquivo
-              tests/test_blog_navigation.py relativo ao diretório do script.
+              tests/test_blog_navigation.py relativo à raiz do projeto.
               Use --test-file para apontar para outro arquivo.
               O arquivo deve conter as variáveis BLOG_POSTS e BLOG_POSTS_HIST
               como listas Python com strings entre aspas duplas.
@@ -112,7 +111,7 @@ def parse_args() -> argparse.Namespace:
         default=None,
         metavar="CAMINHO",
         help="Caminho para o arquivo de teste com BLOG_POSTS/BLOG_POSTS_HIST "
-        "(default: tests/test_blog_navigation.py relativo ao script)",
+        "(default: tests/test_blog_navigation.py relativo à raiz do projeto)",
     )
 
     args = parser.parse_args()
@@ -130,8 +129,9 @@ def resolve_test_file(override: Path | None) -> Path:
     if override:
         path = override
     else:
-        script_dir = Path(__file__).resolve().parent
-        path = script_dir / "tests" / "test_blog_navigation.py"
+        # src/e2e/rotate_posts.py → parents[2] = raiz do projeto
+        project_root = Path(__file__).resolve().parents[2]
+        path = project_root / "tests" / "test_blog_navigation.py"
 
     if not path.is_file():
         print(f"❌ Arquivo não encontrado: {path}", file=sys.stderr)

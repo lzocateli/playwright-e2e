@@ -190,7 +190,10 @@ def pytest_configure(config: pytest.Config) -> None:
     if config.getoption("--enable-vpn", default=False):
         from vpn.conftest_vpn import VPNPlugin
 
-        config.pluginmanager.register(VPNPlugin(config), "vpn_plugin")
+        configs_dir = Path(str(config.rootdir)) / "vpn" / "configs"
+        config.pluginmanager.register(
+            VPNPlugin(config, configs_dir=configs_dir), "vpn_plugin"
+        )
 
 
 def pytest_runtest_logreport(report: pytest.TestReport) -> None:

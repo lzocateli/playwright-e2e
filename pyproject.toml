@@ -1,3 +1,7 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "playwright-e2e"
 version = "0.1.0"
@@ -11,8 +15,16 @@ dependencies = [
     "pytest-xdist>=3.5",
 ]
 
+[project.scripts]
+e2e = "e2e.run_e2e:main"
+rotate-posts = "e2e.rotate_posts:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/e2e", "src/vpn"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 addopts = [
     "--html=reports/report.html",
     "--self-contained-html",

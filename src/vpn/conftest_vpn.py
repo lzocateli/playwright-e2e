@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 import pytest
 
@@ -14,9 +15,9 @@ logger = logging.getLogger(__name__)
 class VPNPlugin:
     """Plugin pytest que gerencia ciclo de vida da VPN."""
 
-    def __init__(self, config: pytest.Config) -> None:
+    def __init__(self, config: pytest.Config, configs_dir: Path | None = None) -> None:
         self._config = config
-        self._manager = VPNManager()
+        self._manager = VPNManager(configs_dir=configs_dir)
         self._rotate_mode = config.getoption("--vpn-rotate", default="off")
         self._strict_mode = config.getoption("--vpn-strict", default=False)
         self._current_ip_info: dict = {}

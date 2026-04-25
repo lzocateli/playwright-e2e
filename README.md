@@ -1,255 +1,198 @@
 # playwright-e2e
 
-Ferramenta genérica de testes E2E com [Playwright](https://playwright.dev/) + [pytest](https://pytest.org/), rodando em container [Podman](https://podman.io/) rootless.
+Ferramenta genérica de testes E2E com [Playwright](https://playwright.dev/) + [pytest](https://pytest.org/), rodando em container [Docker](https://docs.docker.com/get-docker/) ou [Podman](https://podman.io/) rootless.
 
 ## Funcionalidades
 
-- **Multi-browser**: Chromium, Firefox e WebKit
+- **Multi-browser**: Chromium, Firefox e WebKit (selecionado aleatoriamente se não especificado)
 - **Simulação humana**: delays configuráveis entre ações (`slow_page`, `human_delay`)
 - **VPN integrada**: Mullvad/WireGuard para simular conexões de locais diferentes
 - **Rotação de VPN**: por teste, por sessão, ou desligado
+- **Rotação de artigos**: atualiza automaticamente os posts testados via sitemap
 - **Relatórios**: HTML com vídeos gravados de cada teste
-- **Container Podman**: rootless, com bind mounts para testes e evidências
+- **Container**: Docker ou Podman, com bind mounts — sem rebuild para mudanças no código
+- **Multiplataforma**: Linux, macOS e Windows nativo (sem WSL2)
 
 ## Estrutura
 
 ```text
 playwright-e2e/
-├── pyproject.toml           # Dependências (uv)
-├── conftest.py              # Fixtures: slow_page, human_delay, browser context
-├── Containerfile            # Imagem com Playwright + WireGuard
-├── run-e2e.sh               # Script wrapper Podman
-├── rotate-posts.py          # Rotação automática de artigos via sitemap
-├── vpn/
-│   ├── vpn_manager.py       # Classe VPNManager (connect/disconnect/rotate)
-│   ├── conftest_vpn.py      # Plugin pytest para VPN
-│   └── configs/             # Arquivos .conf WireGuard (gitignored)
+├── pyproject.toml              # Dependências, entry points e configuração pytest (uv)
+├── Containerfile               # Imagem com Playwright + WireGuard
+├── src/
+│   ├── e2e/
+│   │   ├── run_e2e.py          # Programa principal: executa os testes via container
+│   │   └── rotate_posts.py     # Rotação automática de artigos via sitemap
+│   └── vpn/
+│       ├── vpn_manager.py      # Classe VPNManager (connect/disconnect/rotate)
+│       └── conftest_vpn.py     # Plugin pytest para VPN
 ├── tests/
-│   ├── test_blog_navigation.py   # Navegação no blog com simulação de leitura
-│   ├── test_seo_live.py          # Verificações SEO em produção
-│   └── test_sample_generic.py    # Template genérico para novos roteiros
-└── reports/                 # Relatórios HTML + vídeos (gitignored)
+│   ├── conftest.py             # Fixtures: slow_page, human_delay, browser context
+│   ├── test_blog_navigation.py # Navegação no blog com simulação de leitura
+│   ├── test_seo_live.py        # Verificações SEO em produção
+│   └── test_sample_generic.py  # Template genérico para novos roteiros
+├── vpn/
+│   └── configs/                # Arquivos .conf WireGuard (gitignored)
+└── reports/                    # Relatórios HTML + vídeos (gitignored)
 ```
+
+## Programas
+
+### `uv run e2e` — Executor de testes
+
+Wrapper multiplataforma que gerencia o ciclo completo de execução:
+
+1. Detecta automaticamente `docker` ou `podman` (docker tem prioridade)
+2. Baixa a imagem `lzocateli/playwright-e2e:v0.1.0` do registry na primeira execução; se não existir no registry, faz o build local a partir do `Containerfile`
+3. Monta `tests/`, `src/e2e/`, `src/vpn/` e `vpn/configs/` como bind volumes — qualquer alteração local é refletida imediatamente, sem necessidade de `--rebuild`
+4. Rotaciona artigos do blog (opcional, via `--rotate-posts`)
+5. Executa `pytest` dentro do container com os parâmetros configurados
+6. Exibe o caminho do relatório e abre automaticamente (se `--open-report` ou `--open-first-video`)
+
+### `uv run rotate-posts` — Rotação de artigos
+
+Utilitário para diversificar os artigos testados a cada execução:
+
+1. Busca `sitemap.xml` no site configurado e extrai URLs de `/posts/`
+2. Lê `BLOG_POSTS` e `BLOG_POSTS_HIST` do arquivo `tests/test_blog_navigation.py`
+3. Move `BLOG_POSTS` atual para `BLOG_POSTS_HIST` (acumula histórico)
+4. Seleciona aleatoriamente N artigos novos (que ainda não estão no histórico)
+5. Grava os novos `BLOG_POSTS` e `BLOG_POSTS_HIST` no arquivo de teste
+6. Quando todos os artigos já estiverem no histórico, recicla os mais antigos automaticamente
+
+Use `--dry-run` para ver o que mudaria sem alterar o arquivo.
+
+> **Fluxo recomendado**: `uv run e2e --rotate-posts --base-url https://seusite.com` — rotaciona e testa em uma única invocação.
 
 ## Pré-requisitos
 
-- [Docker](https://docs.docker.com/get-docker/) ou [Podman](https://podman.io/) (rootless)
-- **Windows**: [WSL2](https://learn.microsoft.com/pt-br/windows/wsl/install) com Docker Desktop ou Podman instalado dentro da distro
-- **Opcional**: Conta [Mullvad VPN](https://mullvad.net/) (para testes com VPN)
-- **Opcional**: [uv](https://docs.astral.sh/uv/) (para usar `--rotate-posts`)
+- [uv](https://docs.astral.sh/uv/) — gerenciador de pacotes e task runner (requerido)
+- [Docker](https://docs.docker.com/get-docker/) ou [Podman](https://podman.io/) — container runtime
+- **Opcional**: Conta [Mullvad VPN](https://mullvad.net/) com configs WireGuard em `vpn/configs/`
 
-> **Nota**: Nenhuma instalação local de Python, browsers ou dependências é necessária.
-> O código-fonte (testes, fixtures, VPN manager) é montado via bind volume no runtime — não é copiado para dentro da imagem.
-> Qualquer alteração local em testes ou fixtures é refletida imediatamente, sem necessidade de `--rebuild`.
+> `uv` gerencia o Python e todas as dependências automaticamente. Não é necessário instalar Python, browsers ou outras dependências manualmente.
+> O código-fonte é montado via bind volume no runtime — qualquer alteração local em testes ou fixtures é refletida imediatamente, sem necessidade de `--rebuild`.
 
-### Execução no Windows (WSL2)
-
-O script `run-e2e.sh` requer bash. No Windows, execute de dentro do WSL2:
+## Instalação do projeto
 
 ```bash
-# Abra o terminal WSL2 e navegue até o projeto
-cd /mnt/c/Users/<seu-usuario>/projetos/playwright-e2e
-
-# Execução normal
-./run-e2e.sh --base-url https://zocate.li
-
-# Execução completa (VPN + rotação + relatório + vídeo)
-./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed normal --vpn-strict --open-report --open-first-video --rotate-posts -- tests/test_blog_navigation.py
-
-# Ou via PowerShell (invocando WSL):
-# wsl bash ./run-e2e.sh --base-url https://zocate.li
+git clone https://github.com/lzocateli/playwright-e2e.git
+cd playwright-e2e
+uv sync
 ```
 
-> **PowerShell/CMD nativos** não executam `.sh` diretamente. Use sempre WSL2 como shell.
-> Tudo roda dentro do container.
-> **Imagem executada pelo script**: `lzocateli/playwright-e2e:v0.1.0`.
-> Na primeira execução, o `run-e2e.sh` tenta baixar essa imagem do Docker Hub; se ela não existir no registry, faz o build local a partir do `Containerfile`.
+## Instalando uv
 
-## Instalando uv (opcional)
-
-`uv` é necessário apenas se você pretende usar o flag `--rotate-posts` no `run-e2e.sh` para rotacionar automaticamente artigos do blog antes dos testes.
-
-### Linux
-
-**Opção 1: Instalador oficial (recomendado)**
+### Linux / macOS
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-Após instalar, adicione `uv` ao `$PATH`:
+Após instalar, adicione ao PATH se necessário:
 
 ```bash
-# Adicione esta linha ao ~/.bashrc, ~/.zshrc ou ~/.profile
+# Adicione ao ~/.bashrc, ~/.zshrc ou ~/.profile
 export PATH="$HOME/.local/bin:$PATH"
-
-# Aplique imediatamente
-source ~/.bashrc  # ou ~/.zshrc
+source ~/.bashrc
 ```
 
-Verifique a instalação:
+Via package manager:
 
 ```bash
-uv --version
+brew install uv          # macOS (Homebrew)
+sudo apt-get install uv  # Ubuntu/Debian
+sudo dnf install uv      # Fedora/RHEL
+sudo pacman -S uv        # Arch
 ```
 
-**Opção 2: Via package manager (se disponível na distro)**
+### Windows (nativo)
 
-```bash
-# Ubuntu/Debian
-sudo apt-get install uv
+```powershell
+# Via winget
+winget install --id=astral-sh.uv -e
 
-# Fedora/RHEL
-sudo dnf install uv
-
-# Arch
-sudo pacman -S uv
-
-# Homebrew (macOS e Linux)
-brew install uv
-```
-
-### macOS
-
-```bash
-# Via Homebrew (recomendado)
-brew install uv
-
-# Ou via instalador oficial
-curl -LsSf https://astral.sh/uv/install.sh | sh
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-### Windows (WSL2)
-
-Dentro do WSL2, execute o mesmo comando do Linux:
-
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-Ou via package manager:
-
-```bash
-# Apt (Ubuntu/Debian no WSL)
-sudo apt-get install uv
-
-# Scoop (PowerShell nativo do Windows)
+# Via Scoop
 scoop install uv
+
+# Ou via PowerShell (instalador oficial)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
 ### Verificar instalação
 
 ```bash
 uv --version
-uv python --version
 ```
 
 ## Execução
 
 ```bash
-# Dar permissão de execução (uma vez)
-chmod +x run-e2e.sh
-
-# Básico — sem VPN, velocidade normal
-./run-e2e.sh --base-url https://zocate.li
+# Básico — sem VPN, velocidade normal, browser aleatório
+uv run e2e --base-url https://zocate.li
 
 # Com simulação humana lenta
-./run-e2e.sh --base-url https://zocate.li --human-speed slow
-
-# Com VPN (requer configs em vpn/configs/)
-./run-e2e.sh --base-url https://zocate.li --enable-vpn
-
-# VPN com rotação por teste + velocidade lenta
-./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed slow
-
-# VPN estrita (falha se saída não for Mullvad)
-./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --vpn-strict
+uv run e2e --base-url https://zocate.li --human-speed slow
 
 # Browser específico
-./run-e2e.sh --base-url https://zocate.li --browser chromium
+uv run e2e --base-url https://zocate.li --browser chromium
 
-# Reconstruir imagem
-./run-e2e.sh --rebuild --base-url https://zocate.li
+# Com VPN (requer configs em vpn/configs/)
+uv run e2e --base-url https://zocate.li --enable-vpn
+
+# VPN com rotação por teste + velocidade lenta
+uv run e2e --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed slow
+
+# VPN estrita (falha se saída não for Mullvad)
+uv run e2e --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --vpn-strict
+
+# Reconstruir imagem (após atualização do Containerfile)
+uv run e2e --rebuild --base-url https://zocate.li
 
 # Abrir relatório automaticamente ao finalizar
-./run-e2e.sh --open-report --base-url https://zocate.li
+uv run e2e --open-report --base-url https://zocate.li
 
-# Abrir automaticamente o primeiro vídeo (.webm)
-./run-e2e.sh --open-first-video --base-url https://zocate.li
+# Abrir o primeiro vídeo (.webm) ao finalizar
+uv run e2e --open-first-video --base-url https://zocate.li
 
-# Rotacionar posts do blog antes dos testes (requer uv)
-./run-e2e.sh --base-url https://zocate.li --rotate-posts
+# Rotacionar posts do blog antes dos testes
+uv run e2e --base-url https://zocate.li --rotate-posts
 
 # Rotacionar posts com range customizado
-./run-e2e.sh --base-url https://zocate.li --rotate-posts --min-posts 2 --max-posts 5
+uv run e2e --base-url https://zocate.li --rotate-posts --min-posts 2 --max-posts 5
 
 # Preview da rotação (sem alterar arquivo de teste)
-./run-e2e.sh --base-url https://zocate.li --rotate-posts --dry-run-rotate
+uv run e2e --base-url https://zocate.li --rotate-posts --dry-run-rotate
 
 # Rotacionar + limpar histórico
-./run-e2e.sh --base-url https://zocate.li --rotate-posts --reset-hist
+uv run e2e --base-url https://zocate.li --rotate-posts --reset-hist
 
-# Execução com todos os parametros
-./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed normal --vpn-strict --open-report --open-first-video --rotate-posts -- tests/test_blog_navigation.py
+# Passar argumentos extras ao pytest (após --)
+uv run e2e --base-url https://zocate.li -- -k test_home
+
+# Execução completa (VPN + rotação + relatório + vídeo)
+uv run e2e --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed normal --vpn-strict --open-report --open-first-video --rotate-posts -- tests/test_blog_navigation.py
 ```
 
-## Rotação automática de artigos
-
-O script `rotate-posts.py` lê o `sitemap.xml` do blog, seleciona aleatoriamente artigos novos para `BLOG_POSTS` e move os já testados para `BLOG_POSTS_HIST` em `tests/test_blog_navigation.py`.
-
-```bash
-# Ver o que mudaria (sem alterar arquivo)
-uv run rotate-posts.py --dry-run
-
-# Rotação padrão (3-6 artigos novos)
-uv run rotate-posts.py
-
-# Range customizado
-uv run rotate-posts.py --min-posts 3 --max-posts 6
-
-# Site diferente
-uv run rotate-posts.py --base-url https://zocate.li
-
-# Todos os parametros
-uv run rotate-posts.py --base-url https://zocate.li --min-posts 3 --max-posts 6 --test-file tests/test_blog_navigation.py
-
-# Limpar histórico e começar do zero
-uv run rotate-posts.py --reset-hist
-```
-
-### Opções CLI (rotate-posts.py)
+## Opções CLI (`uv run e2e`)
 
 | Opção | Valores | Default | Descrição |
 |---|---|---|---|
-| `--base-url` | URL | `https://zocate.li` | URL base do site (para buscar sitemap.xml) |
-| `--min-posts` | inteiro | `3` | Mínimo de artigos a selecionar |
-| `--max-posts` | inteiro | `6` | Máximo de artigos a selecionar |
-| `--dry-run` | flag | desligado | Exibe o que mudaria sem alterar o arquivo |
-| `--reset-hist` | flag | desligado | Limpa `BLOG_POSTS_HIST` antes de rotacionar |
-| `--test-file` | caminho | auto-detectado | Caminho para `test_blog_navigation.py` |
-
-> **Fluxo recomendado**: Execute `uv run rotate-posts.py` antes de `run-e2e.sh` para testar artigos diferentes a cada execução.
-> Quando todos os artigos do sitemap já estiverem no histórico, o script recicla os mais antigos automaticamente.
-
-## Opções CLI (pytest)
-
-| Opção | Valores | Default | Descrição |
-|---|---|---|---|
-| `--base-url` | URL | `http://localhost:1313` | URL base do site a testar |
+| `--base-url` | URL | `http://host.containers.internal:1313` | URL base do site a testar |
+| `--browser` | `chromium`, `firefox`, `webkit` | aleatório | Browser específico |
 | `--human-speed` | `slow`, `normal`, `fast` | `normal` | Intensidade dos delays humanos |
 | `--enable-vpn` | flag | desligado | Ativa conexão VPN WireGuard |
 | `--vpn-rotate` | `per-test`, `per-session`, `off` | `off` | Quando rotacionar VPN |
-| `--vpn-strict` | flag | desligado | Falha a execução se `mullvad_exit_ip` não for verdadeiro |
-| `--browser` | `chromium`, `firefox`, `webkit` | aleatório | Browser específico (se omitido, escolhido aleatoriamente) |
-| `--open-report` | flag | desligado | Abre `reports/report.html` automaticamente ao finalizar |
-| `--open-first-video` | flag | desligado | Abre o primeiro `.webm` de `reports/videos` automaticamente |
-| `--rotate-posts` | flag | desligado | Rotaciona artigos do blog antes dos testes (requer `uv`) |
-| `--min-posts` | inteiro | `3` | Posts mínimos a selecionar (usado com `--rotate-posts`) |
-| `--max-posts` | inteiro | `6` | Posts máximos a selecionar (usado com `--rotate-posts`) |
-| `--reset-hist` | flag | desligado | Limpa histórico de posts antes de rotacionar (usado com `--rotate-posts`) |
-| `--dry-run-rotate` | flag | desligado | Preview da rotação sem alterar arquivo (usado com `--rotate-posts`) |
+| `--vpn-strict` | flag | desligado | Falha se `mullvad_exit_ip` não for verdadeiro |
+| `--rebuild` | flag | desligado | Remove e reconstrói a imagem antes de executar |
+| `--open-report` | flag | desligado | Abre `reports/report.html` ao finalizar |
+| `--open-first-video` | flag | desligado | Abre o primeiro `.webm` de `reports/videos` |
+| `--rotate-posts` | flag | desligado | Rotaciona artigos do blog antes dos testes |
+| `--min-posts` | inteiro | `3` | Posts mínimos a selecionar (com `--rotate-posts`) |
+| `--max-posts` | inteiro | `6` | Posts máximos a selecionar (com `--rotate-posts`) |
+| `--reset-hist` | flag | desligado | Limpa histórico de posts (com `--rotate-posts`) |
+| `--dry-run-rotate` | flag | desligado | Preview da rotação sem alterar arquivo |
+| `--` | — | — | Tudo após `--` é passado diretamente ao pytest |
 
 ### Multiplicadores de velocidade
 
@@ -258,6 +201,39 @@ uv run rotate-posts.py --reset-hist
 | `slow` | 2.0x | 4-16s | Simula leitura atenta |
 | `normal` | 1.0x | 2-8s | Navegação natural |
 | `fast` | 0.3x | 0.6-2.4s | Teste rápido |
+
+## Rotação de artigos (`uv run rotate-posts`)
+
+```bash
+# Ver o que mudaria (sem alterar arquivo)
+uv run rotate-posts --dry-run
+
+# Rotação padrão (3-6 artigos novos)
+uv run rotate-posts
+
+# Range customizado
+uv run rotate-posts --min-posts 3 --max-posts 6
+
+# Site diferente do default
+uv run rotate-posts --base-url https://zocate.li
+
+# Todos os parâmetros
+uv run rotate-posts --base-url https://zocate.li --min-posts 3 --max-posts 6 --test-file tests/test_blog_navigation.py
+
+# Limpar histórico e começar do zero
+uv run rotate-posts --reset-hist
+```
+
+### Opções CLI (`uv run rotate-posts`)
+
+| Opção | Valores | Default | Descrição |
+|---|---|---|---|
+| `--base-url` | URL | `https://zocate.li` | URL base do site (para buscar `sitemap.xml`) |
+| `--min-posts` | inteiro | `3` | Mínimo de artigos a selecionar |
+| `--max-posts` | inteiro | `6` | Máximo de artigos a selecionar |
+| `--dry-run` | flag | desligado | Exibe o que mudaria sem alterar o arquivo |
+| `--reset-hist` | flag | desligado | Limpa `BLOG_POSTS_HIST` antes de rotacionar |
+| `--test-file` | caminho | auto-detectado | Caminho para `test_blog_navigation.py` |
 
 ## Fixtures disponíveis
 
@@ -369,8 +345,7 @@ ls vpn/configs/*.conf
 ### 4. Rodar testes com VPN
 
 ```bash
-# Container com VPN (necessita NET_ADMIN)
-./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test
+uv run e2e --base-url https://zocate.li --enable-vpn --vpn-rotate per-test
 
 # Verificar nos logs: "VPN sessão iniciada — Local: br-sao | IP: x.x.x.x"
 ```
@@ -380,10 +355,10 @@ ls vpn/configs/*.conf
 1. Copie `tests/test_sample_generic.py` como base
 2. Renomeie para `tests/test_<seu_cenario>.py`
 3. Use as fixtures `slow_page` e `human_delay`
-4. Rode via container:
+4. Execute via container:
 
    ```bash
-   ./run-e2e.sh --base-url https://seusite.com -- tests/test_<seu_cenario>.py
+   uv run e2e --base-url https://seusite.com -- tests/test_<seu_cenario>.py
    ```
 
 Exemplo mínimo:
@@ -416,13 +391,14 @@ Quando VPN está ativa, o relatório também inclui contexto da VPN por teste:
 
 | Problema | Solução |
 |---|---|
-| `wg-quick: command not found` | Reconstruir imagem: `./run-e2e.sh --rebuild` |
-| VPN sem conectar no Podman | Verificar `--cap-add=NET_ADMIN` e `--sysctl` |
-| Browser timeout | Aumentar timeout: `--timeout 60000` |
-| Imagem desatualizada | Usar `./run-e2e.sh --rebuild` |
-| Vídeos não gravados | Confirmar diretório `reports/videos/` montado |
-| Alterações em testes não refletidas | Verificar se `--rebuild` não é necessário (bind volume já monta código do host); confirmar que o container usa a versão mais recente da imagem |
+| `wg-quick: command not found` | Reconstruir imagem: `uv run e2e --rebuild` |
+| VPN sem conectar no Podman | Verificar `--cap-add=NET_ADMIN` e `--sysctl` nos logs |
+| Browser timeout | Aumentar timeout: `-- --timeout 60000` |
+| Imagem desatualizada | Usar `uv run e2e --rebuild` |
+| Vídeos não gravados | Confirmar que `reports/videos/` foi criado após execução |
+| Alterações em testes não refletidas | O bind volume monta o código do host automaticamente — `--rebuild` não é necessário para mudanças em `tests/` ou `src/` |
 | `sd-bus call: Permission denied` no build (WSL2) | Ver seção abaixo |
+| Container runtime não encontrado | Instalar Docker ou Podman; no Windows, Docker Desktop é recomendado |
 
 ### Build falha com `sd-bus call: Permission denied` no WSL2
 
@@ -460,7 +436,7 @@ systemctl --no-pager status
 BUILDAH_ISOLATION=chroot podman build --cgroup-manager=cgroupfs -t lzocateli/playwright-e2e:v0.1.0 -f Containerfile .
 ```
 
-Após o build, o `run-e2e.sh` detecta que a imagem já existe e executa normalmente.
+Após o build, `uv run e2e` detecta que a imagem já existe e executa normalmente.
 
 ### `docker save` falha com `reference does not exist`
 
@@ -484,7 +460,7 @@ Salve o `.tar` no Windows:
 docker save -o C:\Users\lzoca\projetos\playwright-e2e\playwright-e2e.tar lzocateli/playwright-e2e:v0.1.0
 ```
 
-No WSL, valide o arquivo e carregue no Podman:
+No WSL, carregue no Podman:
 
 ```bash
 ls -lh /mnt/c/Users/lzoca/projetos/playwright-e2e/playwright-e2e.tar
@@ -495,7 +471,7 @@ podman tag localhost/v0.1.0:latest lzocateli/playwright-e2e:v0.1.0
 Depois execute normalmente:
 
 ```bash
-./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed normal -- tests/test_blog_navigation.py
+uv run e2e --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed normal -- tests/test_blog_navigation.py
 ```
 
 ## Tutorial: Publicar imagens no Docker Hub (Windows)
@@ -510,31 +486,20 @@ docker login
 
 ### 2. Copiar a imagem base da Microsoft
 
-Baixar, tagear como `lzocateli/playwright` e enviar:
-
 ```powershell
-# Baixar a imagem da Microsoft
 docker pull mcr.microsoft.com/playwright/python:v1.49.0-noble
-
-# Tagear com o nome lzocateli/playwright
 docker tag mcr.microsoft.com/playwright/python:v1.49.0-noble lzocateli/playwright:v1.49.0-noble
-
-# Enviar para o Docker Hub
 docker push lzocateli/playwright:v1.49.0-noble
 ```
 
 ### 3. Construir e enviar a imagem customizada (playwright-e2e)
 
-Essa e a imagem que o `run-e2e.sh` executa.
+Essa é a imagem que `uv run e2e` executa.
 
 ```powershell
-# Navegar até o diretório do projeto
 cd C:\Users\lzoca\projetos\playwright-e2e
 
-# Construir a imagem a partir do Containerfile
 docker build -f Containerfile -t lzocateli/playwright-e2e:v0.1.0 .
-
-# Enviar para o Docker Hub
 docker push lzocateli/playwright-e2e:v0.1.0
 ```
 
@@ -561,6 +526,9 @@ podman pull docker.io/lzocateli/playwright-e2e:v0.1.0
 podman run --rm \
   -v ./reports:/app/reports:Z \
   -v ./tests:/app/tests:ro,Z \
+  -v ./src/e2e:/app/src/e2e:ro,Z \
+  -v ./src/vpn:/app/src/vpn:ro,Z \
+  -v ./vpn/configs:/app/vpn/configs:ro,Z \
   docker.io/lzocateli/playwright-e2e:v0.1.0 \
   --base-url https://zocate.li
 ```
@@ -569,23 +537,11 @@ podman run --rm \
 
 | Imagem | Origem | Descrição |
 |---|---|---|
-| `mcr.microsoft.com/playwright/python:v1.49.0-noble` | Microsoft | Base original: Ubuntu 24.04 + Python + browsers |
+| `mcr.microsoft.com/playwright/python:v1.49.0-noble` | Microsoft | Base: Ubuntu 24.04 + Python + browsers |
 | `lzocateli/playwright:v1.49.0-noble` | Docker Hub | Cópia da imagem base Microsoft |
-| `lzocateli/playwright-e2e:v0.1.0` | Build do Containerfile | Imagem completa com testes + VPN + uv (usa `lzocateli/playwright` como base) |
-
-- Copiar os arquivos para wsl2
-
-```bash
-mkdir -p /home/lzocateli/projs/playwright-e2e/vpn/configs
-cp -r /mnt/c/Users/lzoca/projetos/playwright-e2e/vpn/configs/* /home/lzocateli/projs/playwright-e2e/vpn/configs/
-
-# Exemplo de execução real
-./run-e2e.sh --base-url https://zocate.li --enable-vpn --vpn-rotate per-test --human-speed normal --vpn-strict --open-report --open-first-video --rotate-posts -- tests/test_blog_navigation.py
-```
+| `lzocateli/playwright-e2e:v0.1.0` | Build do Containerfile | Imagem completa com VPN + uv (usa `lzocateli/playwright` como base) |
 
 ### Atualizando versões
-
-Quando atualizar o Playwright ou o projeto:
 
 ```powershell
 # Nova versão da base Microsoft (ex: v1.50.0)
@@ -597,6 +553,10 @@ docker push lzocateli/playwright:v1.50.0-noble
 docker build -f Containerfile -t lzocateli/playwright-e2e:v0.2.0 .
 docker push lzocateli/playwright-e2e:v0.2.0
 ```
+
+## Licença
+
+Este projeto é distribuído sob a licença MIT. Veja o arquivo [LICENSE](LICENSE).
 
 ## Licença
 

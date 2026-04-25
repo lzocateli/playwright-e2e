@@ -26,7 +26,12 @@ class VPNManager:
     """Gerencia conexões WireGuard para testes E2E."""
 
     def __init__(self, configs_dir: str | Path | None = None) -> None:
-        self._configs_dir = Path(configs_dir or Path(__file__).parent / "configs")
+        if configs_dir is not None:
+            self._configs_dir = Path(configs_dir)
+        else:
+            # Fallback: vpn/configs/ relativo à raiz do projeto
+            # src/vpn/vpn_manager.py → parents[2] = raiz do projeto
+            self._configs_dir = Path(__file__).resolve().parents[2] / "vpn" / "configs"
         self._current_conf: Path | None = None
         self._interface: str | None = None
 
