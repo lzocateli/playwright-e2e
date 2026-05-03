@@ -11,14 +11,13 @@ from __future__ import annotations
 import pytest
 
 BLOG_POSTS = [
-    # Selecionados aleatoriamente em 2026-04-25 via rotate-posts.py
-    "/posts/2026/efcore-migrations-multi-projeto-secrets-scaffolding/",
-    "/posts/2025/full-text-search-api-rest-csharp-sqlserver-oracle-postgres/",
-    "/posts/2026/blazor-webassembly-producao-corporativa-angular-comparativo/",
-    "/posts/2026/gargalo-banco-dados-efcore-mensageria-paginacao/",
+    # Selecionados aleatoriamente em 2026-05-03 via rotate-posts
+    "/posts/2025/programacao-assincrona-csharp-async-await/",
+    "/posts/2026/api-gateway-seguranca-spa-jwt-bff/",
+    "/posts/2026/projeto-fenix-romance-ti-devops/",
 ]
 BLOG_POSTS_HIST = [
-    # Atualizado em 2026-04-25 via rotate-posts.py (21 artigos)
+    # Atualizado em 2026-05-03 via rotate-posts (25 artigos)
     "/posts/2026/deno-bun-nodejs-comparativo-node-modules-angular/",
     "/posts/2026/efcore-bulkextensions-operacoes-massa-dotnet/",
     "/posts/2026/uv-python-gerenciador-pacotes-comparativo-csharp/",
@@ -40,6 +39,10 @@ BLOG_POSTS_HIST = [
     "/posts/2025/diferenca-executar-script-terminal-pipeline/",
     "/posts/2026/blazor-wasm-crud-radzen-tutorial-dotnet10/",
     "/posts/2026/efcore-fluent-api-mapeamento-desacoplamento/",
+    "/posts/2026/efcore-migrations-multi-projeto-secrets-scaffolding/",
+    "/posts/2025/full-text-search-api-rest-csharp-sqlserver-oracle-postgres/",
+    "/posts/2026/blazor-webassembly-producao-corporativa-angular-comparativo/",
+    "/posts/2026/gargalo-banco-dados-efcore-mensageria-paginacao/",
 ]
 
 
