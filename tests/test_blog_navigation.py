@@ -8,16 +8,19 @@ Simula um usuário real navegando pelo blog:
 
 from __future__ import annotations
 
+import logging
 import pytest
 
+logger = logging.getLogger(__name__)
+
 BLOG_POSTS = [
-    # Selecionados aleatoriamente em 2026-05-03 via rotate-posts
-    "/posts/2025/programacao-assincrona-csharp-async-await/",
-    "/posts/2026/api-gateway-seguranca-spa-jwt-bff/",
-    "/posts/2026/projeto-fenix-romance-ti-devops/",
+    # Selecionados aleatoriamente em 2026-06-20 via rotate-posts
+    "/posts/2026/comparacao-csharp-go-python-java-ruby-php-qual-linguagem-escolher/",
+    "/posts/2026/prevencao-ddos-infraestrutura-seguranca/",
+    "/posts/2026/comparacao-linguagem-csharp-sistemas-criticos/",
 ]
 BLOG_POSTS_HIST = [
-    # Atualizado em 2026-05-03 via rotate-posts (25 artigos)
+    # Atualizado em 2026-06-20 via rotate-posts (35 artigos)
     "/posts/2026/deno-bun-nodejs-comparativo-node-modules-angular/",
     "/posts/2026/efcore-bulkextensions-operacoes-massa-dotnet/",
     "/posts/2026/uv-python-gerenciador-pacotes-comparativo-csharp/",
@@ -43,25 +46,37 @@ BLOG_POSTS_HIST = [
     "/posts/2025/full-text-search-api-rest-csharp-sqlserver-oracle-postgres/",
     "/posts/2026/blazor-webassembly-producao-corporativa-angular-comparativo/",
     "/posts/2026/gargalo-banco-dados-efcore-mensageria-paginacao/",
+    "/posts/2025/programacao-assincrona-csharp-async-await/",
+    "/posts/2026/api-gateway-seguranca-spa-jwt-bff/",
+    "/posts/2025/keycloak-autenticacao-gratuita-container-csharp/",
+    "/posts/2026/projeto-fenix-romance-ti-devops/",
+    "/posts/2026/fabrica-cretinos-digitais-desmurget-responsabilidade-dev/",
+    "/posts/2026/podman-rootless-producao-docker-seguranca-compliance/",
+    "/posts/2026/executar-csharp-como-script-dotnet/",
+    "/posts/2026/redis-chaves-grandes-ambientes-compartilhados/",
+    "/posts/2026/angular-22-reatividade-arquitetura-migracao/",
+    "/posts/2026/cicd-seguro-dependabot-sast-dast-github/",
 ]
 
 
 class TestBlogHome:
     """Testes de navegação na página inicial."""
 
-    def test_home_loads(self, slow_page, base_url: str) -> None:
+    def test_home_loads(self, log_vpn_info, slow_page, base_url: str) -> None:
         """Home carrega sem erros e tem título."""
         slow_page.goto(base_url)
         assert slow_page.page.title(), "Página inicial sem título"
 
-    def test_home_has_posts(self, slow_page, base_url: str) -> None:
+    def test_home_has_posts(self, log_vpn_info, slow_page, base_url: str) -> None:
         """Home lista posts do blog."""
         slow_page.goto(base_url)
         slow_page.scroll_down(300)
         articles = slow_page.page.locator("article").count()
         assert articles > 0, "Nenhum post encontrado na home"
 
-    def test_home_scroll_and_read(self, slow_page, base_url: str, human_delay) -> None:
+    def test_home_scroll_and_read(
+        self, log_vpn_info, slow_page, base_url: str, human_delay
+    ) -> None:
         """Simula scroll pela home como um usuário real."""
         slow_page.goto(base_url)
         slow_page.scroll_to_bottom(step=350, pause_min=1.5, pause_max=4.0)
@@ -72,7 +87,9 @@ class TestBlogPostNavigation:
     """Testes de navegação em posts individuais."""
 
     @pytest.mark.parametrize("post_path", BLOG_POSTS)
-    def test_post_loads(self, slow_page, base_url: str, post_path: str) -> None:
+    def test_post_loads(
+        self, log_vpn_info, slow_page, base_url: str, post_path: str
+    ) -> None:
         """Post carrega e tem título h1."""
         slow_page.goto(f"{base_url}{post_path}")
         h1 = slow_page.page.locator("h1").first
@@ -80,7 +97,7 @@ class TestBlogPostNavigation:
 
     @pytest.mark.parametrize("post_path", BLOG_POSTS)
     def test_post_read_simulation(
-        self, slow_page, base_url: str, post_path: str, human_delay
+        self, log_vpn_info, slow_page, base_url: str, post_path: str, human_delay
     ) -> None:
         """Simula a leitura completa de um post."""
         slow_page.goto(f"{base_url}{post_path}")

@@ -3,12 +3,13 @@
 Inclui:
 - Configuração de browser context (viewport, locale, vídeo)
 - Fixtures de sleep/delay para simular comportamento real de usuário
-- CLI options: --base-url, --human-speed, --enable-vpn, --vpn-rotate, --vpn-strict
+- Fixture de logging de VPN
 """
 
 from __future__ import annotations
 
 import html
+import logging
 import random
 import time
 from pathlib import Path
@@ -17,41 +18,7 @@ from typing import Generator
 import pytest
 from playwright.sync_api import Page, BrowserContext
 
-# ---------------------------------------------------------------------------
-# CLI options
-# ---------------------------------------------------------------------------
-
-
-def pytest_addoption(parser: pytest.Parser) -> None:
-    group = parser.getgroup("e2e", "Opções de testes E2E")
-    # --base-url já é registrado pelo pytest-playwright / pytest-base-url
-    group.addoption(
-        "--human-speed",
-        choices=["slow", "normal", "fast"],
-        default="normal",
-        help="Intensidade dos delays entre ações (default: normal)",
-    )
-    group.addoption(
-        "--enable-vpn",
-        action="store_true",
-        default=False,
-        help="Ativar conexão VPN via WireGuard antes dos testes",
-    )
-    group.addoption(
-        "--vpn-rotate",
-        choices=["per-test", "per-session", "off"],
-        default="off",
-        help="Rotação de VPN: per-test, per-session, ou off (default: off)",
-    )
-    group.addoption(
-        "--vpn-strict",
-        action="store_true",
-        default=False,
-        help=(
-            "Falha a execução se a saída não for Mullvad "
-            "(valida mullvad_exit_ip no início da sessão e após rotações)"
-        ),
-    )
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -180,25 +147,33 @@ def slow_page(page: Page, speed_multiplier: float) -> SlowPage:
     return SlowPage(page, speed_multiplier)
 
 
+@pytest.fixture
+def log_vpn_info(request: pytest.FixtureRequest) -> None:
+    """Loga informações da VPN sendo utilizada no teste."""
+    try:
+        vpn_plugin = request.config.pluginmanager.get_plugin("vpn_plugin")
+        if vpn_plugin:
+            location = vpn_plugin._manager.current_location or "Nenhuma"
+            ip_info = vpn_plugin._current_ip_info
+            ip = ip_info.get("ip", "desconhecido") if ip_info else "desconhecido"
+            country = (
+                ip_info.get("country", "desconhecido") if ip_info else "desconhecido"
+            )
+            city = ip_info.get("city", "desconhecido") if ip_info else "desconhecido"
+            logger.info(
+                "🌍 VPN: Local=%s | IP=%s | País=%s | Cidade=%s",
+                location,
+                ip,
+                country,
+                city,
+            )
+    except Exception as e:
+        logger.debug("VPN info não disponível: %s", e)
+
+
 # ---------------------------------------------------------------------------
-# VPN integration (carrega fixtures de vpn/ se --enable-vpn ativo)
+# VPN integration - plugin é registrado em conftest.py da raiz
 # ---------------------------------------------------------------------------
-
-
-def pytest_configure(config: pytest.Config) -> None:
-    """Registra o plugin de VPN se --enable-vpn estiver ativo."""
-    if config.getoption("--enable-vpn", default=False):
-        import sys
-
-        _src = str(Path(__file__).resolve().parent.parent / "src")
-        if _src not in sys.path:
-            sys.path.insert(0, _src)
-        from vpn.conftest_vpn import VPNPlugin
-
-        configs_dir = Path(str(config.rootdir)) / "vpn" / "configs"
-        config.pluginmanager.register(
-            VPNPlugin(config, configs_dir=configs_dir), "vpn_plugin"
-        )
 
 
 def pytest_runtest_logreport(report: pytest.TestReport) -> None:
