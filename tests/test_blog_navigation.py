@@ -14,48 +14,17 @@ import pytest
 logger = logging.getLogger(__name__)
 
 BLOG_POSTS = [
-    # Selecionados aleatoriamente em 2026-06-20 via rotate-posts
-    "/posts/2026/comparacao-csharp-go-python-java-ruby-php-qual-linguagem-escolher/",
-    "/posts/2026/prevencao-ddos-infraestrutura-seguranca/",
-    "/posts/2026/comparacao-linguagem-csharp-sistemas-criticos/",
+    # Selecionados aleatoriamente em 2026-07-10 via rotate-posts
+    "/posts/2026/deno-bun-nodejs-comparativo-node-modules-angular/",
+    "/posts/2025/paralelismo-csharp-parallel-tasks-plinq/",
+    "/posts/2026/google-adsense-analytics-seo-hugo/",
+    "/posts/2026/angular-22-reatividade-arquitetura-migracao/",
 ]
 BLOG_POSTS_HIST = [
-    # Atualizado em 2026-06-20 via rotate-posts (35 artigos)
-    "/posts/2026/deno-bun-nodejs-comparativo-node-modules-angular/",
-    "/posts/2026/efcore-bulkextensions-operacoes-massa-dotnet/",
-    "/posts/2026/uv-python-gerenciador-pacotes-comparativo-csharp/",
-    "/posts/2026/ia-llm-rag-agents-mcp-guia-profissional/",
-    "/posts/2026/logging-estruturado-dinamico-dotnet8-azure-appinsights/",
-    "/posts/2025/design-api-rest-verbos-http-parameter-binding-aspnet-core/",
-    "/posts/2026/bff-backend-for-frontend-seguranca/",
-    "/posts/2025/paralelismo-csharp-parallel-tasks-plinq/",
-    "/posts/2026/ia-vai-substituir-desenvolvedores-opiniao/",
-    "/posts/2026/dotnet-worker-background-service-processamento-alto-volume/",
-    "/posts/2025/arquitetura-software-gof-padroes-cloud-microservicos/",
-    "/posts/2026/paginacao-api-rest-csharp-efcore-sqlserver-oracle-postgres/",
-    "/posts/2025/github-copilot-agentes-ia-modelos-guia-completo/",
-    "/posts/2026/autenticacao-autorizacao-jwt-oauth2-openid/",
-    "/posts/2025/programador-pragmatico-licoes-praticas/",
-    "/posts/2026/google-adsense-analytics-seo-hugo/",
-    "/posts/2026/pipeline-configuracao-dotnet8-ioptions-secrets-docker/",
-    "/posts/2025/makefile-automatizando-python-hugo-docker/",
-    "/posts/2025/diferenca-executar-script-terminal-pipeline/",
-    "/posts/2026/blazor-wasm-crud-radzen-tutorial-dotnet10/",
-    "/posts/2026/efcore-fluent-api-mapeamento-desacoplamento/",
-    "/posts/2026/efcore-migrations-multi-projeto-secrets-scaffolding/",
-    "/posts/2025/full-text-search-api-rest-csharp-sqlserver-oracle-postgres/",
-    "/posts/2026/blazor-webassembly-producao-corporativa-angular-comparativo/",
-    "/posts/2026/gargalo-banco-dados-efcore-mensageria-paginacao/",
-    "/posts/2025/programacao-assincrona-csharp-async-await/",
-    "/posts/2026/api-gateway-seguranca-spa-jwt-bff/",
-    "/posts/2025/keycloak-autenticacao-gratuita-container-csharp/",
-    "/posts/2026/projeto-fenix-romance-ti-devops/",
-    "/posts/2026/fabrica-cretinos-digitais-desmurget-responsabilidade-dev/",
-    "/posts/2026/podman-rootless-producao-docker-seguranca-compliance/",
-    "/posts/2026/executar-csharp-como-script-dotnet/",
-    "/posts/2026/redis-chaves-grandes-ambientes-compartilhados/",
-    "/posts/2026/angular-22-reatividade-arquitetura-migracao/",
-    "/posts/2026/cicd-seguro-dependabot-sast-dast-github/",
+    # Atualizado em 2026-07-10 via rotate-posts (3 artigos)
+    "/posts/2026/comparacao-linguagem-csharp-sistemas-criticos/",
+    "/posts/2026/comparacao-csharp-go-python-java-ruby-php-qual-linguagem-escolher/",
+    "/posts/2026/prevencao-ddos-infraestrutura-seguranca/",
 ]
 
 
