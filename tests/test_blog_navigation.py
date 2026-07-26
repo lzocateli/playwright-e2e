@@ -14,17 +14,20 @@ import pytest
 logger = logging.getLogger(__name__)
 
 BLOG_POSTS = [
-    # Selecionados aleatoriamente em 2026-07-10 via rotate-posts
+    # Selecionados aleatoriamente em 2026-07-26 via rotate-posts
+    "/posts/2026/efcore-bulkextensions-operacoes-massa-dotnet/",
+    "/posts/2026/pipeline-configuracao-dotnet8-ioptions-secrets-docker/",
+    "/posts/2025/design-api-rest-verbos-http-parameter-binding-aspnet-core/",
+]
+BLOG_POSTS_HIST = [
+    # Atualizado em 2026-07-26 via rotate-posts (7 artigos)
+    "/posts/2026/comparacao-linguagem-csharp-sistemas-criticos/",
+    "/posts/2026/comparacao-csharp-go-python-java-ruby-php-qual-linguagem-escolher/",
+    "/posts/2026/prevencao-ddos-infraestrutura-seguranca/",
     "/posts/2026/deno-bun-nodejs-comparativo-node-modules-angular/",
     "/posts/2025/paralelismo-csharp-parallel-tasks-plinq/",
     "/posts/2026/google-adsense-analytics-seo-hugo/",
     "/posts/2026/angular-22-reatividade-arquitetura-migracao/",
-]
-BLOG_POSTS_HIST = [
-    # Atualizado em 2026-07-10 via rotate-posts (3 artigos)
-    "/posts/2026/comparacao-linguagem-csharp-sistemas-criticos/",
-    "/posts/2026/comparacao-csharp-go-python-java-ruby-php-qual-linguagem-escolher/",
-    "/posts/2026/prevencao-ddos-infraestrutura-seguranca/",
 ]
 
 
